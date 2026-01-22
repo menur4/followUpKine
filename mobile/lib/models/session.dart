@@ -49,17 +49,20 @@ class Session {
 class MonthlyStats {
   final String month;
   final int sortKey;
-  final int gigoux;
-  final int tindano;
+  final Map<String, int> countByPractitioner;
   final int total;
 
   MonthlyStats({
     required this.month,
     required this.sortKey,
-    required this.gigoux,
-    required this.tindano,
+    required this.countByPractitioner,
     required this.total,
   });
+
+  /// Helper pour obtenir le count d'un praticien
+  int getCount(String practitioner) {
+    return countByPractitioner[practitioner] ?? 0;
+  }
 }
 
 class PractitionerStats {

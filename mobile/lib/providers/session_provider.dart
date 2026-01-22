@@ -3,10 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../models/session.dart';
+import '../models/app_settings.dart';
 import '../services/local_calendar_service.dart';
+import '../services/settings_service.dart';
 
 class SessionProvider extends ChangeNotifier {
   final LocalCalendarService _calendarService = LocalCalendarService();
+  final SettingsService _settingsService = SettingsService();
 
   List<Session> _sessions = [];
   bool _loading = true;
@@ -14,10 +17,13 @@ class SessionProvider extends ChangeNotifier {
   String? _error;
   DateTime? _lastUpdated;
   bool _permissionDenied = false;
+  AppSettings _settings = AppSettings.defaults();
+  bool _needsPractitionerSelection = false;
+  Map<String, int> _discoveredPractitioners = {};
 
   static const String _cacheKey = 'kine_sessions_cache';
   static const String _cacheTimestampKey = 'kine_sessions_cache_timestamp';
-  static const int _cacheExpirationMinutes = 5;
+  static const int _cacheExpirationMinutes = 60; // 1 heure
 
   List<Session> get sessions => _sessions;
   bool get loading => _loading;
@@ -25,6 +31,9 @@ class SessionProvider extends ChangeNotifier {
   String? get error => _error;
   DateTime? get lastUpdated => _lastUpdated;
   bool get permissionDenied => _permissionDenied;
+  AppSettings get settings => _settings;
+  bool get needsPractitionerSelection => _needsPractitionerSelection;
+  Map<String, int> get discoveredPractitioners => _discoveredPractitioners;
 
   List<Session> get pastSessions =>
       _sessions.where((s) => !s.isFuture).toList();
@@ -57,6 +66,7 @@ class SessionProvider extends ChangeNotifier {
   List<MonthlyStats> get monthlyStats {
     final Map<String, Map<String, int>> statsByMonth = {};
     final DateFormat monthFormat = DateFormat('MMM yyyy', 'fr_FR');
+    final practitioners = _settings.selectedPractitioners;
 
     // Générer tous les mois de mars 2025 jusqu'au mois actuel
     final startDate = DateTime(2025, 3, 1);
@@ -79,7 +89,11 @@ class SessionProvider extends ChangeNotifier {
     while (current.isBefore(endDate) ||
         (current.year == endDate.year && current.month == endDate.month)) {
       final key = '${current.year}-${current.month.toString().padLeft(2, '0')}';
-      statsByMonth[key] = {'gigoux': 0, 'tindano': 0};
+      final monthData = <String, int>{};
+      for (final p in practitioners) {
+        monthData[p.toLowerCase()] = 0;
+      }
+      statsByMonth[key] = monthData;
       current = DateTime(current.year, current.month + 1, 1);
     }
 
@@ -88,10 +102,12 @@ class SessionProvider extends ChangeNotifier {
       final key =
           '${session.date.year}-${session.date.month.toString().padLeft(2, '0')}';
       if (statsByMonth.containsKey(key)) {
-        if (session.practitioner.contains('Gigoux')) {
-          statsByMonth[key]!['gigoux'] = statsByMonth[key]!['gigoux']! + 1;
-        } else if (session.practitioner.contains('Tindano')) {
-          statsByMonth[key]!['tindano'] = statsByMonth[key]!['tindano']! + 1;
+        for (final p in practitioners) {
+          if (session.practitioner.toLowerCase().contains(p.toLowerCase())) {
+            statsByMonth[key]![p.toLowerCase()] =
+                (statsByMonth[key]![p.toLowerCase()] ?? 0) + 1;
+            break;
+          }
         }
       }
     }
@@ -105,56 +121,83 @@ class SessionProvider extends ChangeNotifier {
       final month = int.parse(parts[1]);
       final date = DateTime(year, month, 1);
 
-      final gigoux = statsByMonth[key]!['gigoux']!;
-      final tindano = statsByMonth[key]!['tindano']!;
+      final countByPractitioner = <String, int>{};
+      int total = 0;
+      for (final p in practitioners) {
+        final count = statsByMonth[key]![p.toLowerCase()] ?? 0;
+        countByPractitioner[p] = count;
+        total += count;
+      }
 
       return MonthlyStats(
         month: monthFormat.format(date),
         sortKey: year * 100 + month,
-        gigoux: gigoux,
-        tindano: tindano,
-        total: gigoux + tindano,
+        countByPractitioner: countByPractitioner,
+        total: total,
       );
     }).toList();
   }
 
   List<PractitionerStats> get practitionerStats {
-    int gigoux = 0;
-    int tindano = 0;
+    final practitioners = _settings.selectedPractitioners;
+    final counts = <String, int>{};
+
+    for (final p in practitioners) {
+      counts[p] = 0;
+    }
 
     for (final session in _sessions) {
-      if (session.practitioner.contains('Gigoux')) {
-        gigoux++;
-      } else if (session.practitioner.contains('Tindano')) {
-        tindano++;
+      for (final p in practitioners) {
+        if (session.practitioner.toLowerCase().contains(p.toLowerCase())) {
+          counts[p] = (counts[p] ?? 0) + 1;
+          break;
+        }
       }
     }
 
-    final total = gigoux + tindano;
+    final total = counts.values.fold(0, (sum, count) => sum + count);
     if (total == 0) return [];
 
-    return [
-      PractitionerStats(
-        name: 'C. Gigoux',
-        count: gigoux,
-        percentage: (gigoux / total) * 100,
-      ),
-      PractitionerStats(
-        name: 'L. Tindano',
-        count: tindano,
-        percentage: (tindano / total) * 100,
-      ),
-    ];
+    return practitioners.map((p) {
+      final count = counts[p] ?? 0;
+      return PractitionerStats(
+        name: p,
+        count: count,
+        percentage: (count / total) * 100,
+      );
+    }).toList();
   }
 
   Future<void> loadSessions() async {
     _loading = true;
     _error = null;
     _permissionDenied = false;
+    _needsPractitionerSelection = false;
     notifyListeners();
 
     try {
-      // Vérifier les permissions du calendrier
+      // Charger les paramètres
+      _settings = await _settingsService.loadSettings();
+      debugPrint('Settings loaded: hasCompletedSetup=${_settings.hasCompletedSetup}');
+      debugPrint('Selected practitioners: ${_settings.selectedPractitioners}');
+
+      // Si le setup est complété, essayer de charger depuis le cache
+      if (_settings.hasCompletedSetup) {
+        final cached = await _loadFromCache();
+        if (cached != null && cached.isNotEmpty) {
+          _sessions = cached;
+          _loading = false;
+          notifyListeners();
+
+          // Rafraîchir en arrière-plan si le cache est expiré
+          if (_isCacheExpired()) {
+            _refreshInBackground();
+          }
+          return;
+        }
+      }
+
+      // Vérifier les permissions
       final hasPermission = await _calendarService.hasPermissions();
       if (!hasPermission) {
         final granted = await _calendarService.requestPermissions();
@@ -167,26 +210,75 @@ class SessionProvider extends ChangeNotifier {
         }
       }
 
-      // Essayer de charger depuis le cache d'abord
-      final cached = await _loadFromCache();
-      if (cached != null) {
-        _sessions = cached;
-        _loading = false;
-        notifyListeners();
-
-        // Rafraîchir en arrière-plan si le cache est expiré
-        if (_isCacheExpired()) {
-          _refreshInBackground();
-        }
+      // Si le setup n'est pas complété, déclencher la découverte des praticiens
+      if (!_settings.hasCompletedSetup) {
+        await _discoverPractitioners();
         return;
       }
 
-      // Pas de cache, charger depuis le calendrier local
+      // Charger depuis le calendrier local
       await _fetchFromCalendar();
     } catch (e) {
       _error = e.toString();
       debugPrint('Error loading sessions: $e');
     } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Découvrir les praticiens dans le calendrier
+  Future<void> _discoverPractitioners() async {
+    final startDate = DateTime(2025, 3, 1);
+    final endDate = DateTime(2026, 12, 31);
+
+    debugPrint('Discovering practitioners...');
+    _discoveredPractitioners = await _calendarService.discoverPractitioners(
+      startDate: startDate,
+      endDate: endDate,
+      eventPattern: _settings.eventPattern,
+      calendarId: _settings.selectedCalendarId,
+    );
+
+    debugPrint('Found ${_discoveredPractitioners.length} practitioners');
+    _needsPractitionerSelection = true;
+    _loading = false;
+    notifyListeners();
+  }
+
+  /// Confirmer la sélection des praticiens et charger les sessions
+  Future<void> confirmPractitionerSelection(List<String> selectedPractitioners) async {
+    _loading = true;
+    _needsPractitionerSelection = false;
+    notifyListeners();
+
+    try {
+      // Sauvegarder les praticiens sélectionnés
+      await _settingsService.updateSelectedPractitioners(selectedPractitioners);
+      _settings = await _settingsService.loadSettings();
+
+      // Charger les sessions
+      await _fetchFromCalendar();
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('Error confirming selection: $e');
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Déclencher une nouvelle découverte des praticiens (depuis les paramètres)
+  Future<void> rediscoverPractitioners() async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _discoverPractitioners();
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('Error rediscovering practitioners: $e');
       _loading = false;
       notifyListeners();
     }
@@ -211,7 +303,11 @@ class SessionProvider extends ChangeNotifier {
     final startDate = DateTime(2025, 3, 1);
     final endDate = DateTime(2026, 12, 31);
 
-    _sessions = await _calendarService.fetchSessions(startDate, endDate);
+    _sessions = await _calendarService.fetchSessions(
+      startDate,
+      endDate,
+      settings: _settings,
+    );
 
     _lastUpdated = DateTime.now();
     await _saveToCache();

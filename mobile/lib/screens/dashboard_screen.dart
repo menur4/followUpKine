@@ -6,6 +6,7 @@ import '../widgets/stat_card.dart';
 import '../widgets/session_list.dart';
 import '../widgets/charts.dart';
 import 'settings_screen.dart';
+import 'practitioner_selection_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -71,6 +72,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (provider.loading) {
             return const Center(
               child: CircularProgressIndicator(),
+            );
+          }
+
+          // Écran de sélection des praticiens au premier lancement
+          if (provider.needsPractitionerSelection) {
+            return PractitionerSelectionScreen(
+              discoveredPractitioners: provider.discoveredPractitioners,
+              preselectedPractitioners: provider.settings.selectedPractitioners,
+              onSelectionConfirmed: (selected) {
+                provider.confirmPractitionerSelection(selected);
+              },
             );
           }
 
@@ -217,7 +229,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 16),
 
                   // Graphiques
-                  MonthlyChart(stats: monthlyStats),
+                  MonthlyChart(
+                    stats: monthlyStats,
+                    practitioners: provider.settings.selectedPractitioners,
+                  ),
                   const SizedBox(height: 16),
 
                   Row(

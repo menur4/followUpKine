@@ -2,29 +2,29 @@ import 'package:device_calendar/device_calendar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/session.dart';
+import '../models/app_settings.dart';
 
 class LocalCalendarService {
   final DeviceCalendarPlugin _deviceCalendarPlugin = DeviceCalendarPlugin();
 
-  static const Map<String, String> _practitioners = {
-    'GIGOUX': 'C. Gigoux',
-    'TINDANO': 'L. Tindano',
-  };
-
-  static const List<String> _allowedPractitioners = [
-    'tindano',
-    'léonard',
-    'gigoux',
-    'corentin'
-  ];
-
-  // Pattern pour identifier les séances de kiné : "Rendez-vous chez [nom]" ou "RDV chez [nom]"
-  static final RegExp _kinePattern =
-      RegExp(r'^(?:rendez-vous|rdv) chez\s+(.+)$', caseSensitive: false);
-
   /// Request calendar permissions
   Future<bool> requestPermissions() async {
-    final status = await Permission.calendar.request();
+    var status = await Permission.calendar.status;
+    debugPrint('Calendar permission status: $status');
+
+    if (status.isGranted) {
+      return true;
+    }
+
+    if (status.isPermanentlyDenied) {
+      debugPrint('Permission permanently denied, opening settings...');
+      await openAppSettings();
+      status = await Permission.calendar.status;
+      return status.isGranted;
+    }
+
+    status = await Permission.calendar.request();
+    debugPrint('Permission request result: $status');
     return status.isGranted;
   }
 
@@ -49,8 +49,12 @@ class LocalCalendarService {
     return [];
   }
 
-  /// Fetch events from all calendars between two dates
-  Future<List<Event>> fetchEvents(DateTime startDate, DateTime endDate) async {
+  /// Fetch events from calendars between two dates
+  Future<List<Event>> fetchEvents(
+    DateTime startDate,
+    DateTime endDate, {
+    String? calendarId,
+  }) async {
     final hasPerms = await hasPermissions();
     if (!hasPerms) {
       final granted = await requestPermissions();
@@ -60,25 +64,34 @@ class LocalCalendarService {
       }
     }
 
-    final calendars = await getCalendars();
-    debugPrint('Found ${calendars.length} calendars');
-
     final List<Event> allEvents = [];
 
-    for (final calendar in calendars) {
-      debugPrint('Checking calendar: ${calendar.name} (${calendar.id})');
-
+    if (calendarId != null) {
+      // Fetch from specific calendar
       final result = await _deviceCalendarPlugin.retrieveEvents(
-        calendar.id,
-        RetrieveEventsParams(
-          startDate: startDate,
-          endDate: endDate,
-        ),
+        calendarId,
+        RetrieveEventsParams(startDate: startDate, endDate: endDate),
       );
-
       if (result.isSuccess && result.data != null) {
         allEvents.addAll(result.data!);
-        debugPrint('  Found ${result.data!.length} events');
+      }
+    } else {
+      // Fetch from all calendars
+      final calendars = await getCalendars();
+      debugPrint('Found ${calendars.length} calendars');
+
+      for (final calendar in calendars) {
+        debugPrint('Checking calendar: ${calendar.name} (${calendar.id})');
+
+        final result = await _deviceCalendarPlugin.retrieveEvents(
+          calendar.id,
+          RetrieveEventsParams(startDate: startDate, endDate: endDate),
+        );
+
+        if (result.isSuccess && result.data != null) {
+          allEvents.addAll(result.data!);
+          debugPrint('  Found ${result.data!.length} events');
+        }
       }
     }
 
@@ -86,86 +99,113 @@ class LocalCalendarService {
     return allEvents;
   }
 
-  String? _extractPractitionerName(String? title) {
+  /// Extract practitioner name from event title using the given pattern
+  String? extractPractitionerName(String? title, RegExp pattern) {
     if (title == null) return null;
-    final match = _kinePattern.firstMatch(title);
-    if (match != null) {
+    final match = pattern.firstMatch(title);
+    if (match != null && match.groupCount >= 1) {
       return match.group(1)?.trim();
     }
     return null;
   }
 
-  String _detectPractitioner(String? title) {
-    final practitionerName = _extractPractitionerName(title);
+  /// Discover all unique practitioner names from calendar events
+  Future<Map<String, int>> discoverPractitioners({
+    required DateTime startDate,
+    required DateTime endDate,
+    required String eventPattern,
+    String? calendarId,
+  }) async {
+    final regex = _buildEventRegex(eventPattern);
+    final events = await fetchEvents(startDate, endDate, calendarId: calendarId);
 
-    if (practitionerName != null) {
-      final nameLower = practitionerName.toLowerCase();
+    final Map<String, int> practitioners = {};
 
-      if (nameLower.contains('tindano') || nameLower.contains('léonard')) {
-        return _practitioners['TINDANO']!;
-      }
-      if (nameLower.contains('gigoux') || nameLower.contains('corentin')) {
-        return _practitioners['GIGOUX']!;
+    for (final event in events) {
+      final name = extractPractitionerName(event.title, regex);
+      if (name != null && name.isNotEmpty) {
+        practitioners[name] = (practitioners[name] ?? 0) + 1;
       }
     }
 
-    return _practitioners['TINDANO']!;
+    // Sort by count descending
+    final sortedEntries = practitioners.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Map.fromEntries(sortedEntries);
   }
 
-  bool _isAllowedPractitioner(String? title) {
-    final practitionerName = _extractPractitionerName(title);
-    if (practitionerName == null) return false;
-
-    final nameLower = practitionerName.toLowerCase();
-    return _allowedPractitioners.any((p) => nameLower.contains(p));
-  }
-
-  bool _isKineSession(Event event) {
+  /// Check if event matches the pattern
+  bool _matchesPattern(Event event, RegExp pattern) {
     final title = event.title;
     if (title == null) return false;
+    return pattern.hasMatch(title);
+  }
 
-    final matchesPattern = _kinePattern.hasMatch(title);
-    final allowedPractitioner = _isAllowedPractitioner(title);
+  /// Check if event practitioner is in the selected list
+  bool _isPractitionerSelected(
+    Event event,
+    RegExp pattern,
+    List<String> selectedPractitioners,
+  ) {
+    if (selectedPractitioners.isEmpty) return true;
 
-    return matchesPattern && allowedPractitioner;
+    final name = extractPractitionerName(event.title, pattern);
+    if (name == null) return false;
+
+    return selectedPractitioners.any(
+      (selected) => name.toLowerCase() == selected.toLowerCase(),
+    );
   }
 
   bool _isPaid(DateTime eventDate, DateTime today) {
     return eventDate.isBefore(today) ||
-        eventDate.year == today.year &&
+        (eventDate.year == today.year &&
             eventDate.month == today.month &&
-            eventDate.day == today.day;
+            eventDate.day == today.day);
   }
 
-  /// Convert calendar events to Session objects
-  List<Session> parseEventsToSessions(List<Event> events) {
-    final today = DateTime.now();
+  RegExp _buildEventRegex(String eventPattern) {
+    final patterns = eventPattern
+        .split('|')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty);
+    final regexPattern = '^(?:${patterns.join('|')})\\s+(.+)\$';
+    return RegExp(regexPattern, caseSensitive: false);
+  }
 
-    debugPrint('Filtering events...');
+  /// Convert calendar events to Session objects with configurable filtering
+  List<Session> parseEventsToSessions(
+    List<Event> events, {
+    required String eventPattern,
+    required List<String> selectedPractitioners,
+  }) {
+    final today = DateTime.now();
+    final regex = _buildEventRegex(eventPattern);
+
+    debugPrint('Filtering events with pattern: $eventPattern');
+    debugPrint('Selected practitioners: $selectedPractitioners');
     debugPrint('Total events received: ${events.length}');
 
-    // Debug: show first few events
-    if (events.isNotEmpty) {
-      debugPrint('Sample events:');
-      for (final e in events.take(10)) {
-        debugPrint('  - ${e.title} (${e.start})');
-      }
-    }
+    final filteredEvents = events.where((event) {
+      final matchesPattern = _matchesPattern(event, regex);
+      if (!matchesPattern) return false;
 
-    final kineEvents = events.where((event) {
-      final isKine = _isKineSession(event);
-      if (isKine) {
-        debugPrint('Found kiné session: ${event.title}');
+      final practitionerSelected =
+          _isPractitionerSelected(event, regex, selectedPractitioners);
+      if (practitionerSelected) {
+        debugPrint('Found matching session: ${event.title}');
       }
-      return isKine;
+      return practitionerSelected;
     }).toList();
 
     debugPrint(
-        'Found ${kineEvents.length} kiné sessions out of ${events.length} total events');
+        'Found ${filteredEvents.length} matching sessions out of ${events.length} total events');
 
-    final sessions = kineEvents.map((event) {
+    final sessions = filteredEvents.map((event) {
       final date = event.start ?? DateTime.now();
       final paid = _isPaid(date, today);
+      final practitionerName = extractPractitionerName(event.title, regex) ?? 'Inconnu';
 
       String? time;
       if (event.start != null) {
@@ -176,7 +216,7 @@ class LocalCalendarService {
       return Session(
         id: event.eventId ?? DateTime.now().millisecondsSinceEpoch.toString(),
         date: date,
-        practitioner: _detectPractitioner(event.title),
+        practitioner: practitionerName,
         paid: paid,
         paidDate: paid ? today : null,
         location: event.location,
@@ -188,9 +228,21 @@ class LocalCalendarService {
     return sessions;
   }
 
-  /// Fetch and parse sessions from the device calendar
-  Future<List<Session>> fetchSessions(DateTime startDate, DateTime endDate) async {
-    final events = await fetchEvents(startDate, endDate);
-    return parseEventsToSessions(events);
+  /// Fetch and parse sessions with configurable settings
+  Future<List<Session>> fetchSessions(
+    DateTime startDate,
+    DateTime endDate, {
+    required AppSettings settings,
+  }) async {
+    final events = await fetchEvents(
+      startDate,
+      endDate,
+      calendarId: settings.selectedCalendarId,
+    );
+    return parseEventsToSessions(
+      events,
+      eventPattern: settings.eventPattern,
+      selectedPractitioners: settings.selectedPractitioners,
+    );
   }
 }

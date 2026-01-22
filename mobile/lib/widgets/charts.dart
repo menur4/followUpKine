@@ -4,12 +4,26 @@ import '../models/session.dart';
 
 class MonthlyChart extends StatelessWidget {
   final List<MonthlyStats> stats;
+  final List<String> practitioners;
 
-  const MonthlyChart({super.key, required this.stats});
+  static const List<Color> _chartColors = [
+    Color(0xFF42A5F5), // blue
+    Color(0xFF66BB6A), // green
+    Color(0xFFFFCA28), // amber
+    Color(0xFFAB47BC), // purple
+    Color(0xFFEF5350), // red
+    Color(0xFF26C6DA), // cyan
+  ];
+
+  const MonthlyChart({
+    super.key,
+    required this.stats,
+    required this.practitioners,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (stats.isEmpty) {
+    if (stats.isEmpty || practitioners.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -112,39 +126,37 @@ class MonthlyChart extends StatelessWidget {
                     final stat = entry.value;
                     return BarChartGroupData(
                       x: index,
-                      barRods: [
-                        BarChartRodData(
-                          toY: stat.gigoux.toDouble(),
-                          color: Colors.blue[400],
+                      barRods: practitioners.asMap().entries.map((pEntry) {
+                        final pIndex = pEntry.key;
+                        final practitioner = pEntry.value;
+                        return BarChartRodData(
+                          toY: stat.getCount(practitioner).toDouble(),
+                          color: _chartColors[pIndex % _chartColors.length],
                           width: 12,
                           borderRadius: const BorderRadius.only(
                             topLeft: Radius.circular(4),
                             topRight: Radius.circular(4),
                           ),
-                        ),
-                        BarChartRodData(
-                          toY: stat.tindano.toDouble(),
-                          color: Colors.green[400],
-                          width: 12,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(4),
-                            topRight: Radius.circular(4),
-                          ),
-                        ),
-                      ],
+                        );
+                      }).toList(),
                     );
                   }).toList(),
                 ),
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _LegendItem(color: Colors.blue[400]!, label: 'C. Gigoux'),
-                const SizedBox(width: 24),
-                _LegendItem(color: Colors.green[400]!, label: 'L. Tindano'),
-              ],
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 16,
+              runSpacing: 8,
+              children: practitioners.asMap().entries.map((entry) {
+                final index = entry.key;
+                final practitioner = entry.value;
+                return _LegendItem(
+                  color: _chartColors[index % _chartColors.length],
+                  label: practitioner,
+                );
+              }).toList(),
             ),
           ],
         ),
@@ -155,6 +167,15 @@ class MonthlyChart extends StatelessWidget {
 
 class PractitionerChart extends StatelessWidget {
   final List<PractitionerStats> stats;
+
+  static const List<Color> _chartColors = [
+    Color(0xFF42A5F5), // blue
+    Color(0xFF66BB6A), // green
+    Color(0xFFFFCA28), // amber
+    Color(0xFFAB47BC), // purple
+    Color(0xFFEF5350), // red
+    Color(0xFF26C6DA), // cyan
+  ];
 
   const PractitionerChart({super.key, required this.stats});
 
@@ -187,9 +208,8 @@ class PractitionerChart extends StatelessWidget {
                   sections: stats.asMap().entries.map((entry) {
                     final index = entry.key;
                     final stat = entry.value;
-                    final colors = [Colors.blue[400]!, Colors.green[400]!];
                     return PieChartSectionData(
-                      color: colors[index % colors.length],
+                      color: _chartColors[index % _chartColors.length],
                       value: stat.count.toDouble(),
                       title: '${stat.percentage.round()}%',
                       radius: 60,
@@ -204,30 +224,32 @@ class PractitionerChart extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            ...stats.map((stat) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: stat.name.contains('Gigoux')
-                              ? Colors.blue[400]
-                              : Colors.green[400],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+            ...stats.asMap().entries.map((entry) {
+              final index = entry.key;
+              final stat = entry.value;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: _chartColors[index % _chartColors.length],
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      const SizedBox(width: 8),
-                      Text(stat.name),
-                      const Spacer(),
-                      Text(
-                        '${stat.count} séances',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                )),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(stat.name),
+                    const Spacer(),
+                    Text(
+                      '${stat.count} séances',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
       ),

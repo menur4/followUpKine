@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'providers/session_provider.dart';
@@ -8,13 +7,6 @@ import 'screens/lock_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Charger les variables d'environnement
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (e) {
-    debugPrint('Note: .env file not found, using mock data');
-  }
 
   // Initialiser les locales françaises
   await initializeDateFormatting('fr_FR', null);

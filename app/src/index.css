@@ -1,0 +1,57 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  /* Design system typography */
+  font-family: var(--chanel-modern-font-sans, 'Inter', system-ui, -apple-system, sans-serif);
+  line-height: var(--chanel-modern-line-height-normal, 1.5);
+  font-weight: var(--chanel-modern-font-weight-normal, 400);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Design system colors */
+  --app-primary: var(--chanel-modern-color-primary-black, #000000);
+  --app-accent: var(--chanel-modern-color-accent-gold, #D4AF37);
+  --app-background: var(--chanel-modern-color-neutral-100, #F5F5F5);
+  --app-surface: var(--chanel-modern-color-white, #FFFFFF);
+  --app-text: var(--chanel-modern-color-text-primary, #1A1A1A);
+  --app-text-secondary: var(--chanel-modern-color-text-secondary, #4A4A4A);
+  --app-success: var(--chanel-modern-color-semantic-success, #059669);
+  --app-info: var(--chanel-modern-color-semantic-info, #2563EB);
+  --app-error: var(--chanel-modern-color-semantic-error, #DC2626);
+
+  /* Design system spacing */
+  --app-spacing-xs: var(--chanel-modern-spacing-1, 0.25rem);
+  --app-spacing-sm: var(--chanel-modern-spacing-2, 0.5rem);
+  --app-spacing-md: var(--chanel-modern-spacing-4, 1rem);
+  --app-spacing-lg: var(--chanel-modern-spacing-6, 1.5rem);
+  --app-spacing-xl: var(--chanel-modern-spacing-8, 2rem);
+
+  /* Design system shadows */
+  --app-shadow-sm: var(--chanel-modern-shadow-sm, 0 1px 3px 0 rgba(0, 0, 0, 0.04));
+  --app-shadow-md: var(--chanel-modern-shadow-md, 0 3px 8px 0 rgba(0, 0, 0, 0.06));
+  --app-shadow-lg: var(--chanel-modern-shadow-lg, 0 4px 12px 0 rgba(0, 0, 0, 0.08));
+
+  /* Design system radius */
+  --app-radius-sm: var(--chanel-modern-radius-sm, 0.25rem);
+  --app-radius-md: var(--chanel-modern-radius-md, 0.5rem);
+  --app-radius-lg: var(--chanel-modern-radius-lg, 0.75rem);
+}
+
+body {
+  background: var(--app-background);
+  min-height: 100vh;
+  margin: 0;
+  color: var(--app-text);
+}
+
+#root {
+  min-height: 100vh;
+}

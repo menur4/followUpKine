@@ -1,0 +1,31 @@
+.chart-container {
+  padding: var(--app-spacing-lg) var(--app-spacing-md);
+  margin-bottom: var(--app-spacing-lg);
+}
+
+.chart-title {
+  color: var(--app-text);
+  margin-bottom: var(--app-spacing-md);
+  font-size: 1.125rem;
+  font-weight: 600;
+  padding-left: var(--app-spacing-xs);
+}
+
+.chart-wrapper {
+  position: relative;
+  height: 280px;
+}
+
+.chart-wrapper--tall {
+  height: 340px;
+}
+
+@media (min-width: 400px) {
+  .chart-wrapper {
+    height: 300px;
+  }
+
+  .chart-wrapper--tall {
+    height: 350px;
+  }
+}

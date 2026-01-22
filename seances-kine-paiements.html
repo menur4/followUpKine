@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Séances Kiné 2025-2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 12px;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            padding: 15px 10px;
+        }
+        
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            line-height: 1.2;
+        }
+        
+        .header p {
+            font-size: 1em;
+            opacity: 0.95;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            text-align: center;
+        }
+        
+        .stat-card.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .stat-card.success {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+        }
+        
+        .stat-card.warning {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        }
+        
+        .stat-card.info {
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.75em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        .stat-card.success .stat-label,
+        .stat-card.warning .stat-label,
+        .stat-card.info .stat-label {
+            color: rgba(0,0,0,0.7);
+        }
+        
+        .stat-value {
+            color: #667eea;
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-bottom: 3px;
+            line-height: 1;
+        }
+        
+        .stat-card.success .stat-value {
+            color: #059669;
+        }
+        
+        .stat-card.warning .stat-value {
+            color: #ea580c;
+        }
+        
+        .stat-card.info .stat-value {
+            color: #0284c7;
+        }
+        
+        .stat-detail {
+            color: #999;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+        
+        .stat-card.success .stat-detail,
+        .stat-card.warning .stat-detail,
+        .stat-card.info .stat-detail {
+            color: rgba(0,0,0,0.6);
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+        
+        .chart-container h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            padding-left: 5px;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 280px;
+        }
+        
+        .chart-wrapper.tall {
+            height: 340px;
+        }
+        
+        .info-section {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            margin-bottom: 20px;
+        }
+        
+        .info-section h2 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 1.2em;
+        }
+        
+        .info-section p {
+            color: #666;
+            line-height: 1.5;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .info-section p strong {
+            color: #333;
+            display: inline-block;
+            min-width: 90px;
+        }
+        
+        .payment-list {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            margin-bottom: 20px;
+        }
+        
+        .payment-list h2 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 1.2em;
+        }
+        
+        .payment-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+        
+        .payment-item.paid {
+            background: #d1fae5;
+            border-left: 4px solid #059669;
+        }
+        
+        .payment-item.future {
+            background: #dbeafe;
+            border-left: 4px solid #0284c7;
+        }
+        
+        .payment-item .date {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .payment-item .status {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .container {
+            scroll-behavior: smooth;
+        }
+        
+        canvas {
+            max-width: 100%;
+            height: auto !important;
+        }
+        
+        @media (min-width: 400px) {
+            .stat-value {
+                font-size: 2.5em;
+            }
+            
+            .chart-wrapper {
+                height: 300px;
+            }
+            
+            .chart-wrapper.tall {
+                height: 350px;
+            }
+        }
+        
+        @media (orientation: landscape) {
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .header h1 {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Kinésithérapie 2025-2026</h1>
+            <p>Vue consolidée avec suivi des paiements</p>
+        </div>
+        
+        <!-- Statistiques de paiement -->
+        <div class="stats-grid">
+            <div class="stat-card success">
+                <div class="stat-label">✅ Payées</div>
+                <div class="stat-value">48</div>
+                <div class="stat-detail">96% du total</div>
+            </div>
+            <div class="stat-card info">
+                <div class="stat-label">📅 À effectuer</div>
+                <div class="stat-value">2</div>
+                <div class="stat-detail">Février 2026</div>
+            </div>
+        </div>
+        
+        <!-- Statistiques globales -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total</div>
+                <div class="stat-value">50</div>
+                <div class="stat-detail">séances</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Période</div>
+                <div class="stat-value" style="font-size: 1.6em;">13 mois</div>
+                <div class="stat-detail">continus</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">C. Gigoux</div>
+                <div class="stat-value">26</div>
+                <div class="stat-detail">52%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">L. Tindano</div>
+                <div class="stat-value">24</div>
+                <div class="stat-detail">48%</div>
+            </div>
+        </div>
+        
+        <!-- Graphique état des paiements -->
+        <div class="chart-container">
+            <h2>💰 État des paiements</h2>
+            <div class="chart-wrapper">
+                <canvas id="paymentStatusChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Liste des séances 2026 -->
+        <div class="payment-list">
+            <h2>📋 Détail des séances 2026</h2>
+            <div class="payment-item paid">
+                <span class="date">08/01/2026</span>
+                <span class="status">✓ Payé le 22/01</span>
+            </div>
+            <div class="payment-item paid">
+                <span class="date">14/01/2026</span>
+                <span class="status">✓ Payé le 22/01</span>
+            </div>
+            <div class="payment-item paid">
+                <span class="date">19/01/2026</span>
+                <span class="status">✓ Payé le 22/01</span>
+            </div>
+            <div class="payment-item paid">
+                <span class="date">22/01/2026</span>
+                <span class="status">✓ Payé le 22/01</span>
+            </div>
+            <div class="payment-item future">
+                <span class="date">02/02/2026</span>
+                <span class="status">📅 À venir (lundi)</span>
+            </div>
+            <div class="payment-item future">
+                <span class="date">06/02/2026</span>
+                <span class="status">📅 À venir (vendredi)</span>
+            </div>
+        </div>
+        
+        <!-- Graphique principal : évolution mensuelle -->
+        <div class="chart-container">
+            <h2>📈 Évolution mensuelle complète</h2>
+            <div class="chart-wrapper tall">
+                <canvas id="monthlyEvolutionChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Répartition par praticien -->
+        <div class="chart-container">
+            <h2>👨‍⚕️ Répartition par praticien</h2>
+            <div class="chart-wrapper">
+                <canvas id="practitionerChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Statistiques détaillées -->
+        <div class="info-section">
+            <h2>📊 Statistiques</h2>
+            <p><strong>🏆 Mois max</strong> Mars 2025 (8 séances)</p>
+            <p><strong>📅 Moyenne</strong> 3.8 séances/mois</p>
+            <p><strong>🔄 Transition</strong> Août 2025 (Gigoux → Tindano)</p>
+            <p><strong>💰 Total payé</strong> 48 séances (2025: 44 + 2026: 4)</p>
+            <p><strong>📅 À venir</strong> 2 séances en février 2026</p>
+        </div>
+        
+        <div class="info-section">
+            <h2>ℹ️ Infos pratiques</h2>
+            <p><strong>📍 Lieu</strong> 24 Rue du Javelot, 75013</p>
+            <p><strong>⏰ Horaire</strong> Généralement 12h15-13h15</p>
+            <p><strong>🏢 Accès</strong> RDC, dalle Olympiades</p>
+            <p><strong>🔄 Mis à jour</strong> 22 jan 2026</p>
+        </div>
+    </div>
+    
+    <script>
+        // Configuration commune
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        font: {
+                            size: 11,
+                            family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto'
+                        },
+                        padding: 10,
+                        boxWidth: 12,
+                        boxHeight: 12
+                    }
+                },
+                tooltip: {
+                    enabled: true,
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    padding: 12,
+                    titleFont: { size: 13 },
+                    bodyFont: { size: 12 }
+                }
+            }
+        };
+        
+        // État des paiements
+        const paymentStatusData = {
+            labels: ['Payées (2025)', 'Payées (2026)', 'À effectuer'],
+            datasets: [{
+                data: [44, 4, 2],
+                backgroundColor: [
+                    'rgba(5, 150, 105, 0.85)',
+                    'rgba(34, 197, 94, 0.85)',
+                    'rgba(2, 132, 199, 0.85)'
+                ],
+                borderWidth: 0
+            }]
+        };
+        
+        // Données mensuelles continues
+        const monthlyEvolutionData = {
+            labels: ['Fév 25', 'Mar 25', 'Avr 25', 'Mai 25', 'Jun 25', 'Jul 25', 'Aoû 25', 'Sep 25', 'Oct 25', 'Nov 25', 'Déc 25', 'Jan 26', 'Fév 26'],
+            datasets: [
+                {
+                    label: 'C. Gigoux',
+                    data: [1, 8, 5, 5, 6, 4, 0, 0, 0, 0, 0, 0, 0],
+                    backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2,
+                    stack: 'stack0'
+                },
+                {
+                    label: 'L. Tindano',
+                    data: [0, 0, 0, 0, 0, 0, 6, 4, 5, 1, 0, 4, 2],
+                    backgroundColor: 'rgba(118, 75, 162, 0.7)',
+                    borderColor: 'rgba(118, 75, 162, 1)',
+                    borderWidth: 2,
+                    stack: 'stack0'
+                }
+            ]
+        };
+        
+        // Répartition globale
+        const practitionerData = {
+            labels: ['Corentin Gigoux', 'Léonard Tindano'],
+            datasets: [{
+                data: [26, 24],
+                backgroundColor: [
+                    'rgba(102, 126, 234, 0.85)',
+                    'rgba(118, 75, 162, 0.85)'
+                ],
+                borderWidth: 0
+            }]
+        };
+        
+        // Graphique état des paiements
+        new Chart(document.getElementById('paymentStatusChart'), {
+            type: 'doughnut',
+            data: paymentStatusData,
+            options: {
+                ...commonOptions,
+                cutout: '65%',
+                plugins: {
+                    ...commonOptions.plugins,
+                    legend: {
+                        ...commonOptions.plugins.legend,
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        ...commonOptions.plugins.tooltip,
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                return label + ': ' + value + ' séances';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Graphique évolution mensuelle
+        new Chart(document.getElementById('monthlyEvolutionChart'), {
+            type: 'bar',
+            data: monthlyEvolutionData,
+            options: {
+                ...commonOptions,
+                scales: {
+                    x: {
+                        stacked: true,
+                        ticks: { 
+                            font: { size: 10 },
+                            maxRotation: 45,
+                            minRotation: 45
+                        },
+                        grid: { display: false }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        ticks: { 
+                            stepSize: 2,
+                            font: { size: 11 }
+                        },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    }
+                },
+                plugins: {
+                    ...commonOptions.plugins,
+                    tooltip: {
+                        ...commonOptions.plugins.tooltip,
+                        callbacks: {
+                            afterBody: function(context) {
+                                const total = context.reduce((sum, item) => sum + item.parsed.y, 0);
+                                return 'Total: ' + total + ' séances';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Graphique répartition
+        new Chart(document.getElementById('practitionerChart'), {
+            type: 'doughnut',
+            data: practitionerData,
+            options: {
+                ...commonOptions,
+                cutout: '65%',
+                plugins: {
+                    ...commonOptions.plugins,
+                    legend: {
+                        ...commonOptions.plugins.legend,
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        ...commonOptions.plugins.tooltip,
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return label + ': ' + value + ' séances (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

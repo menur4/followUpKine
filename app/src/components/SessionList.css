@@ -1,0 +1,65 @@
+.session-list {
+  padding: var(--app-spacing-lg) var(--app-spacing-md);
+  margin-bottom: var(--app-spacing-lg);
+}
+
+.session-list__title {
+  color: var(--app-text);
+  margin-bottom: var(--app-spacing-md);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.session-list__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-spacing-sm);
+}
+
+.session-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--app-spacing-sm) var(--app-spacing-md);
+  border-radius: var(--app-radius-md);
+  font-size: 0.9rem;
+  background: var(--app-background);
+  border-left: 3px solid transparent;
+}
+
+.session-item--paid {
+  border-left-color: var(--app-success);
+}
+
+.session-item--future {
+  border-left-color: var(--app-info);
+}
+
+.session-item__date {
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.session-item__status {
+  font-size: 0.8125rem;
+  color: var(--app-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--app-spacing-xs);
+}
+
+.session-item__check {
+  color: var(--app-success);
+  font-weight: bold;
+}
+
+.session-item__calendar {
+  font-size: 1rem;
+}
+
+.session-list__empty {
+  text-align: center;
+  color: var(--app-text-secondary);
+  padding: var(--app-spacing-md);
+  font-style: italic;
+}

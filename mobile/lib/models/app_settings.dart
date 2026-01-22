@@ -5,6 +5,7 @@ class AppSettings {
   final String? selectedCalendarId;
   final String? selectedCalendarName;
   final List<String> selectedPractitioners;
+  final List<String> selectedOrganizers; // Filter by event creator/organizer
   final bool hasCompletedSetup;
 
   static const String defaultPattern = 'rendez-vous chez|rdv chez';
@@ -14,6 +15,7 @@ class AppSettings {
     this.selectedCalendarId,
     this.selectedCalendarName,
     required this.selectedPractitioners,
+    this.selectedOrganizers = const [],
     required this.hasCompletedSetup,
   });
 
@@ -23,6 +25,7 @@ class AppSettings {
       selectedCalendarId: null,
       selectedCalendarName: null,
       selectedPractitioners: [],
+      selectedOrganizers: [],
       hasCompletedSetup: false,
     );
   }
@@ -32,6 +35,7 @@ class AppSettings {
     String? selectedCalendarId,
     String? selectedCalendarName,
     List<String>? selectedPractitioners,
+    List<String>? selectedOrganizers,
     bool? hasCompletedSetup,
   }) {
     return AppSettings(
@@ -39,6 +43,7 @@ class AppSettings {
       selectedCalendarId: selectedCalendarId ?? this.selectedCalendarId,
       selectedCalendarName: selectedCalendarName ?? this.selectedCalendarName,
       selectedPractitioners: selectedPractitioners ?? this.selectedPractitioners,
+      selectedOrganizers: selectedOrganizers ?? this.selectedOrganizers,
       hasCompletedSetup: hasCompletedSetup ?? this.hasCompletedSetup,
     );
   }
@@ -49,6 +54,7 @@ class AppSettings {
       'selectedCalendarId': selectedCalendarId,
       'selectedCalendarName': selectedCalendarName,
       'selectedPractitioners': selectedPractitioners,
+      'selectedOrganizers': selectedOrganizers,
       'hasCompletedSetup': hasCompletedSetup,
     };
   }
@@ -59,6 +65,7 @@ class AppSettings {
       selectedCalendarId: json['selectedCalendarId'],
       selectedCalendarName: json['selectedCalendarName'],
       selectedPractitioners: List<String>.from(json['selectedPractitioners'] ?? []),
+      selectedOrganizers: List<String>.from(json['selectedOrganizers'] ?? []),
       hasCompletedSetup: json['hasCompletedSetup'] ?? false,
     );
   }

@@ -6,6 +6,8 @@ import '../widgets/stat_card.dart';
 import '../widgets/session_list.dart';
 import '../widgets/charts.dart';
 import 'settings_screen.dart';
+import 'calendar_selection_screen.dart';
+import 'organizer_selection_screen.dart';
 import 'practitioner_selection_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -75,7 +77,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
             );
           }
 
-          // Écran de sélection des praticiens au premier lancement
+          // Chargement des calendriers
+          if (provider.loadingCalendars) {
+            return _buildLoadingScreen(
+              'Chargement des calendriers...',
+              'Récupération de vos calendriers',
+            );
+          }
+
+          // Sélection du calendrier
+          if (provider.needsCalendarSelection) {
+            return CalendarSelectionScreen(
+              calendars: provider.availableCalendars,
+              preselectedCalendarId: provider.settings.selectedCalendarId,
+              onSelectionConfirmed: (calendarId, calendarName) {
+                provider.confirmCalendarSelection(calendarId, calendarName);
+              },
+            );
+          }
+
+          // Découverte des comptes calendrier
+          if (provider.discoveringOrganizers) {
+            return _buildLoadingScreen(
+              'Analyse des comptes...',
+              'Recherche des comptes calendrier',
+            );
+          }
+
+          // Sélection des organisateurs
+          if (provider.needsOrganizerSelection) {
+            return OrganizerSelectionScreen(
+              discoveredOrganizers: provider.discoveredOrganizers,
+              preselectedOrganizers: provider.settings.selectedOrganizers,
+              onSelectionConfirmed: (selected) {
+                provider.confirmOrganizerSelection(selected);
+              },
+              onSkip: () {
+                provider.skipOrganizerSelection();
+              },
+            );
+          }
+
+          // Découverte des praticiens
+          if (provider.discoveringPractitioners) {
+            return _buildLoadingScreen(
+              'Analyse de votre calendrier...',
+              'Recherche des praticiens dans vos événements',
+            );
+          }
+
+          // Sélection des praticiens
           if (provider.needsPractitionerSelection) {
             return PractitionerSelectionScreen(
               discoveredPractitioners: provider.discoveredPractitioners,
@@ -83,6 +134,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onSelectionConfirmed: (selected) {
                 provider.confirmPractitionerSelection(selected);
               },
+            );
+          }
+
+          // Chargement des séances
+          if (provider.loadingSessions) {
+            return _buildLoadingScreen(
+              'Chargement des séances...',
+              'Récupération des événements de votre calendrier',
             );
           }
 
@@ -309,6 +368,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildLoadingScreen(String title, String subtitle) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 24),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

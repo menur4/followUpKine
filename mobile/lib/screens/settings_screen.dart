@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
+import '../services/local_calendar_service.dart';
 import '../models/app_settings.dart';
 import '../providers/session_provider.dart';
+import 'calendar_selection_screen.dart';
 import 'practitioner_selection_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -16,6 +18,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final AuthService _authService = AuthService();
   final SettingsService _settingsService = SettingsService();
+  final LocalCalendarService _calendarService = LocalCalendarService();
   bool _biometricAvailable = false;
   bool _biometricEnabled = false;
   bool _loading = true;
@@ -65,6 +68,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _changeCalendar() async {
+    setState(() => _loading = true);
+
+    final calendars = await _calendarService.getCalendars();
+
+    if (!mounted) return;
+    setState(() => _loading = false);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CalendarSelectionScreen(
+          calendars: calendars,
+          preselectedCalendarId: _appSettings.selectedCalendarId,
+          onSelectionConfirmed: (calendarId, calendarName) async {
+            await _settingsService.updateSelectedCalendar(calendarId, calendarName);
+            await _loadSettings();
+
+            if (mounted) {
+              Navigator.pop(context);
+              // Recharger les sessions avec le nouveau calendrier
+              final provider = context.read<SessionProvider>();
+              await provider.loadSessions();
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Calendrier mis à jour'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _changePractitioners() async {
@@ -209,6 +249,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: Colors.grey,
                     ),
                   ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.calendar_month),
+                  title: const Text('Calendrier'),
+                  subtitle: Text(
+                    _appSettings.selectedCalendarName ?? 'Tous les calendriers',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _changeCalendar,
                 ),
                 ListTile(
                   leading: const Icon(Icons.person),

@@ -115,13 +115,41 @@ class LocalCalendarService {
     required DateTime endDate,
     required String eventPattern,
     String? calendarId,
+    List<String>? accountFilter,
   }) async {
     final regex = _buildEventRegex(eventPattern);
+
+    // Si un filtre de compte est spécifié, récupérer les calendriers pour faire le mapping
+    Map<String, String>? calendarToAccount;
+    if (accountFilter != null && accountFilter.isNotEmpty) {
+      final calendars = await getCalendars();
+      calendarToAccount = {};
+      for (final cal in calendars) {
+        if (cal.id != null && cal.accountName != null) {
+          calendarToAccount[cal.id!] = cal.accountName!;
+        }
+      }
+      debugPrint('Calendar to account mapping: $calendarToAccount');
+    }
+
     final events = await fetchEvents(startDate, endDate, calendarId: calendarId);
 
     final Map<String, int> practitioners = {};
 
     for (final event in events) {
+      // Filter by account if specified
+      if (accountFilter != null && accountFilter.isNotEmpty && calendarToAccount != null) {
+        final eventCalendarId = event.calendarId;
+        if (eventCalendarId == null) continue;
+
+        final accountName = calendarToAccount[eventCalendarId];
+        if (accountName == null || !accountFilter.any(
+          (a) => accountName.toLowerCase() == a.toLowerCase()
+        )) {
+          continue;
+        }
+      }
+
       final name = extractPractitionerName(event.title, regex);
       if (name != null && name.isNotEmpty) {
         practitioners[name] = (practitioners[name] ?? 0) + 1;
@@ -133,6 +161,58 @@ class LocalCalendarService {
       ..sort((a, b) => b.value.compareTo(a.value));
 
     return Map.fromEntries(sortedEntries);
+  }
+
+  /// Discover all unique organizers/creators from matching calendar events
+  /// Note: This method relies on event attendee data which may not be available
+  /// for all calendar providers. For Google Calendar, use calendar account filtering instead.
+  Future<Map<String, int>> discoverOrganizers({
+    required DateTime startDate,
+    required DateTime endDate,
+    required String eventPattern,
+    String? calendarId,
+  }) async {
+    final regex = _buildEventRegex(eventPattern);
+    final events = await fetchEvents(startDate, endDate, calendarId: calendarId);
+
+    final Map<String, int> organizers = {};
+
+    for (final event in events) {
+      // Only consider events that match the pattern
+      if (!_matchesPattern(event, regex)) continue;
+
+      final organizer = _getEventOrganizer(event);
+      if (organizer != null && organizer.isNotEmpty) {
+        organizers[organizer] = (organizers[organizer] ?? 0) + 1;
+      }
+    }
+
+    debugPrint('Organizer discovery: ${organizers.length} unique organizers found');
+
+    // Sort by count descending
+    final sortedEntries = organizers.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Map.fromEntries(sortedEntries);
+  }
+
+  /// Extract organizer email or name from event attendees
+  String? _getEventOrganizer(Event event) {
+    // Find the organizer in the attendees list
+    if (event.attendees != null && event.attendees!.isNotEmpty) {
+      for (final attendee in event.attendees!) {
+        if (attendee != null && attendee.isOrganiser) {
+          // Prefer name over email if available
+          if (attendee.name != null && attendee.name!.isNotEmpty) {
+            return attendee.name;
+          }
+          if (attendee.emailAddress != null && attendee.emailAddress!.isNotEmpty) {
+            return attendee.emailAddress;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   /// Check if event matches the pattern
@@ -179,17 +259,33 @@ class LocalCalendarService {
     List<Event> events, {
     required String eventPattern,
     required List<String> selectedPractitioners,
+    List<String> selectedAccounts = const [],
+    Map<String, String>? calendarToAccount,
   }) {
     final today = DateTime.now();
     final regex = _buildEventRegex(eventPattern);
 
     debugPrint('Filtering events with pattern: $eventPattern');
     debugPrint('Selected practitioners: $selectedPractitioners');
+    debugPrint('Selected accounts: $selectedAccounts');
     debugPrint('Total events received: ${events.length}');
 
     final filteredEvents = events.where((event) {
       final matchesPattern = _matchesPattern(event, regex);
       if (!matchesPattern) return false;
+
+      // Filter by account if specified
+      if (selectedAccounts.isNotEmpty && calendarToAccount != null) {
+        final eventCalendarId = event.calendarId;
+        if (eventCalendarId == null) return false;
+
+        final accountName = calendarToAccount[eventCalendarId];
+        if (accountName == null || !selectedAccounts.any(
+          (a) => accountName.toLowerCase() == a.toLowerCase()
+        )) {
+          return false;
+        }
+      }
 
       final practitionerSelected =
           _isPractitionerSelected(event, regex, selectedPractitioners);
@@ -234,6 +330,18 @@ class LocalCalendarService {
     DateTime endDate, {
     required AppSettings settings,
   }) async {
+    // Build calendar to account mapping if account filter is active
+    Map<String, String>? calendarToAccount;
+    if (settings.selectedOrganizers.isNotEmpty) {
+      final calendars = await getCalendars();
+      calendarToAccount = {};
+      for (final cal in calendars) {
+        if (cal.id != null && cal.accountName != null) {
+          calendarToAccount[cal.id!] = cal.accountName!;
+        }
+      }
+    }
+
     final events = await fetchEvents(
       startDate,
       endDate,
@@ -243,6 +351,8 @@ class LocalCalendarService {
       events,
       eventPattern: settings.eventPattern,
       selectedPractitioners: settings.selectedPractitioners,
+      selectedAccounts: settings.selectedOrganizers,
+      calendarToAccount: calendarToAccount,
     );
   }
 }

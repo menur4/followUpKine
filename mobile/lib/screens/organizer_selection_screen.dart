@@ -1,95 +1,106 @@
 import 'package:flutter/material.dart';
 
-class PractitionerSelectionScreen extends StatefulWidget {
-  final Map<String, int> discoveredPractitioners;
-  final List<String> preselectedPractitioners;
+class OrganizerSelectionScreen extends StatefulWidget {
+  final Map<String, int> discoveredOrganizers;
+  final List<String> preselectedOrganizers;
   final Function(List<String>) onSelectionConfirmed;
+  final VoidCallback? onSkip;
 
-  const PractitionerSelectionScreen({
+  const OrganizerSelectionScreen({
     super.key,
-    required this.discoveredPractitioners,
-    this.preselectedPractitioners = const [],
+    required this.discoveredOrganizers,
+    this.preselectedOrganizers = const [],
     required this.onSelectionConfirmed,
+    this.onSkip,
   });
 
   @override
-  State<PractitionerSelectionScreen> createState() =>
-      _PractitionerSelectionScreenState();
+  State<OrganizerSelectionScreen> createState() =>
+      _OrganizerSelectionScreenState();
 }
 
-class _PractitionerSelectionScreenState
-    extends State<PractitionerSelectionScreen> {
-  late Set<String> _selectedPractitioners;
+class _OrganizerSelectionScreenState extends State<OrganizerSelectionScreen> {
+  late Set<String> _selectedOrganizers;
 
   @override
   void initState() {
     super.initState();
-    if (widget.preselectedPractitioners.isNotEmpty) {
-      _selectedPractitioners = Set.from(widget.preselectedPractitioners);
+    if (widget.preselectedOrganizers.isNotEmpty) {
+      _selectedOrganizers = Set.from(widget.preselectedOrganizers);
     } else {
-      // Par défaut, sélectionner tous les praticiens
-      _selectedPractitioners = Set.from(widget.discoveredPractitioners.keys);
+      // Par défaut, sélectionner tous les organisateurs
+      _selectedOrganizers = Set.from(widget.discoveredOrganizers.keys);
     }
   }
 
-  void _togglePractitioner(String name) {
+  void _toggleOrganizer(String name) {
     setState(() {
-      if (_selectedPractitioners.contains(name)) {
-        _selectedPractitioners.remove(name);
+      if (_selectedOrganizers.contains(name)) {
+        _selectedOrganizers.remove(name);
       } else {
-        _selectedPractitioners.add(name);
+        _selectedOrganizers.add(name);
       }
     });
   }
 
   void _selectAll() {
     setState(() {
-      _selectedPractitioners = Set.from(widget.discoveredPractitioners.keys);
+      _selectedOrganizers = Set.from(widget.discoveredOrganizers.keys);
     });
   }
 
   void _deselectAll() {
     setState(() {
-      _selectedPractitioners.clear();
+      _selectedOrganizers.clear();
     });
   }
 
   void _confirmSelection() {
-    if (_selectedPractitioners.isEmpty) {
+    if (_selectedOrganizers.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Sélectionnez au moins un praticien'),
+          content: Text('Sélectionnez au moins un compte'),
           backgroundColor: Colors.orange,
         ),
       );
       return;
     }
-    widget.onSelectionConfirmed(_selectedPractitioners.toList());
+    widget.onSelectionConfirmed(_selectedOrganizers.toList());
   }
 
   @override
   Widget build(BuildContext context) {
-    final practitioners = widget.discoveredPractitioners.entries.toList();
+    final organizers = widget.discoveredOrganizers.entries.toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sélection des praticiens'),
+        title: const Text('Sélection des comptes'),
         automaticallyImplyLeading: false,
+        actions: [
+          if (widget.onSkip != null)
+            TextButton(
+              onPressed: widget.onSkip,
+              child: const Text(
+                'Passer',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+        ],
       ),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              'Nous avons trouvé ces noms dans vos événements de calendrier. '
-              'Sélectionnez ceux que vous souhaitez suivre :',
+              'Vous avez plusieurs comptes calendrier. '
+              'Sélectionnez ceux dont vous voulez suivre les événements :',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
               ),
             ),
           ),
-          if (widget.discoveredPractitioners.isNotEmpty)
+          if (widget.discoveredOrganizers.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
@@ -121,7 +132,7 @@ class _PractitionerSelectionScreenState
             ),
           const SizedBox(height: 8),
           Expanded(
-            child: practitioners.isEmpty
+            child: organizers.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32),
@@ -129,13 +140,13 @@ class _PractitionerSelectionScreenState
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.search_off,
+                            Icons.person_off,
                             size: 64,
                             color: Colors.grey[400],
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Aucun praticien trouvé',
+                            'Aucun créateur trouvé',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -144,31 +155,37 @@ class _PractitionerSelectionScreenState
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Vérifiez que vos événements correspondent au format '
-                            '"Rendez-vous chez [nom]" ou "RDV chez [nom]"',
+                            'Les événements n\'ont pas d\'information sur leur créateur.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey[500],
                             ),
                           ),
+                          if (widget.onSkip != null) ...[
+                            const SizedBox(height: 24),
+                            ElevatedButton(
+                              onPressed: widget.onSkip,
+                              child: const Text('Continuer sans filtrer'),
+                            ),
+                          ],
                         ],
                       ),
                     ),
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: practitioners.length,
+                    itemCount: organizers.length,
                     itemBuilder: (context, index) {
-                      final entry = practitioners[index];
+                      final entry = organizers[index];
                       final name = entry.key;
                       final count = entry.value;
-                      final isSelected = _selectedPractitioners.contains(name);
+                      final isSelected = _selectedOrganizers.contains(name);
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: InkWell(
-                          onTap: () => _togglePractitioner(name),
+                          onTap: () => _toggleOrganizer(name),
                           borderRadius: BorderRadius.circular(12),
                           child: Padding(
                             padding: const EdgeInsets.all(16),
@@ -176,7 +193,7 @@ class _PractitionerSelectionScreenState
                               children: [
                                 Checkbox(
                                   value: isSelected,
-                                  onChanged: (_) => _togglePractitioner(name),
+                                  onChanged: (_) => _toggleOrganizer(name),
                                   activeColor: Colors.black,
                                 ),
                                 const SizedBox(width: 12),
@@ -194,7 +211,7 @@ class _PractitionerSelectionScreenState
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '$count séance${count > 1 ? 's' : ''} trouvée${count > 1 ? 's' : ''}',
+                                        '$count calendrier${count > 1 ? 's' : ''}',
                                         style: TextStyle(
                                           fontSize: 13,
                                           color: Colors.grey[600],
@@ -222,8 +239,11 @@ class _PractitionerSelectionScreenState
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed:
-                      _selectedPractitioners.isNotEmpty ? _confirmSelection : null,
+                  onPressed: organizers.isEmpty
+                      ? widget.onSkip
+                      : (_selectedOrganizers.isNotEmpty
+                          ? _confirmSelection
+                          : null),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: Colors.black,
@@ -231,9 +251,11 @@ class _PractitionerSelectionScreenState
                     disabledBackgroundColor: Colors.grey[300],
                   ),
                   child: Text(
-                    _selectedPractitioners.isEmpty
-                        ? 'Sélectionnez au moins un praticien'
-                        : 'Confirmer (${_selectedPractitioners.length} sélectionné${_selectedPractitioners.length > 1 ? 's' : ''})',
+                    organizers.isEmpty
+                        ? 'Continuer'
+                        : _selectedOrganizers.isEmpty
+                            ? 'Sélectionnez au moins un compte'
+                            : 'Confirmer (${_selectedOrganizers.length} sélectionné${_selectedOrganizers.length > 1 ? 's' : ''})',
                     style: const TextStyle(fontSize: 16),
                   ),
                 ),

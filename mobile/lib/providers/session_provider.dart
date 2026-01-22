@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:device_calendar/device_calendar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -14,11 +15,23 @@ class SessionProvider extends ChangeNotifier {
   List<Session> _sessions = [];
   bool _loading = true;
   bool _refreshing = false;
+  bool _loadingSessions = false;
   String? _error;
   DateTime? _lastUpdated;
   bool _permissionDenied = false;
   AppSettings _settings = AppSettings.defaults();
+
+  // Setup flow states
+  bool _needsCalendarSelection = false;
+  bool _needsOrganizerSelection = false;
   bool _needsPractitionerSelection = false;
+  bool _loadingCalendars = false;
+  bool _discoveringOrganizers = false;
+  bool _discoveringPractitioners = false;
+
+  // Discovered data
+  List<Calendar> _availableCalendars = [];
+  Map<String, int> _discoveredOrganizers = {};
   Map<String, int> _discoveredPractitioners = {};
 
   static const String _cacheKey = 'kine_sessions_cache';
@@ -28,11 +41,23 @@ class SessionProvider extends ChangeNotifier {
   List<Session> get sessions => _sessions;
   bool get loading => _loading;
   bool get refreshing => _refreshing;
+  bool get loadingSessions => _loadingSessions;
   String? get error => _error;
   DateTime? get lastUpdated => _lastUpdated;
   bool get permissionDenied => _permissionDenied;
   AppSettings get settings => _settings;
+
+  // Setup flow getters
+  bool get needsCalendarSelection => _needsCalendarSelection;
+  bool get needsOrganizerSelection => _needsOrganizerSelection;
   bool get needsPractitionerSelection => _needsPractitionerSelection;
+  bool get loadingCalendars => _loadingCalendars;
+  bool get discoveringOrganizers => _discoveringOrganizers;
+  bool get discoveringPractitioners => _discoveringPractitioners;
+
+  // Discovered data getters
+  List<Calendar> get availableCalendars => _availableCalendars;
+  Map<String, int> get discoveredOrganizers => _discoveredOrganizers;
   Map<String, int> get discoveredPractitioners => _discoveredPractitioners;
 
   List<Session> get pastSessions =>
@@ -172,6 +197,8 @@ class SessionProvider extends ChangeNotifier {
     _loading = true;
     _error = null;
     _permissionDenied = false;
+    _needsCalendarSelection = false;
+    _needsOrganizerSelection = false;
     _needsPractitionerSelection = false;
     notifyListeners();
 
@@ -210,9 +237,9 @@ class SessionProvider extends ChangeNotifier {
         }
       }
 
-      // Si le setup n'est pas complété, déclencher la découverte des praticiens
+      // Si le setup n'est pas complété, commencer par la sélection du calendrier
       if (!_settings.hasCompletedSetup) {
-        await _discoverPractitioners();
+        await _loadCalendars();
         return;
       }
 
@@ -227,28 +254,151 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
+  /// Charger les calendriers disponibles
+  Future<void> _loadCalendars() async {
+    _loadingCalendars = true;
+    _loading = false;
+    notifyListeners();
+
+    debugPrint('Loading calendars...');
+    _availableCalendars = await _calendarService.getCalendars();
+    debugPrint('Found ${_availableCalendars.length} calendars');
+
+    _loadingCalendars = false;
+    _needsCalendarSelection = true;
+    notifyListeners();
+  }
+
+  /// Confirmer la sélection du calendrier et passer à la découverte des comptes/organisateurs
+  Future<void> confirmCalendarSelection(String? calendarId, String? calendarName) async {
+    _needsCalendarSelection = false;
+    notifyListeners();
+
+    try {
+      // Sauvegarder le calendrier sélectionné
+      _settings = _settings.copyWith(
+        selectedCalendarId: calendarId,
+        selectedCalendarName: calendarName,
+      );
+      await _settingsService.saveSettings(_settings);
+
+      // Si "Tous les calendriers" est sélectionné, proposer de filtrer par compte
+      if (calendarId == null) {
+        await _discoverAccountsFromCalendars();
+      } else {
+        // Un calendrier spécifique est sélectionné, passer directement aux praticiens
+        await _discoverPractitioners();
+      }
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('Error confirming calendar selection: $e');
+      notifyListeners();
+    }
+  }
+
+  /// Découvrir les comptes uniques à partir des calendriers disponibles
+  Future<void> _discoverAccountsFromCalendars() async {
+    _discoveringOrganizers = true;
+    notifyListeners();
+
+    // Extraire les comptes uniques des calendriers
+    final Map<String, int> accounts = {};
+    for (final calendar in _availableCalendars) {
+      final accountName = calendar.accountName;
+      if (accountName != null && accountName.isNotEmpty) {
+        accounts[accountName] = (accounts[accountName] ?? 0) + 1;
+      }
+    }
+
+    debugPrint('Found ${accounts.length} unique accounts from ${_availableCalendars.length} calendars');
+    for (final entry in accounts.entries) {
+      debugPrint('  Account: ${entry.key} (${entry.value} calendars)');
+    }
+
+    // S'il y a plusieurs comptes, proposer de filtrer
+    if (accounts.length > 1) {
+      _discoveredOrganizers = accounts;
+      _discoveringOrganizers = false;
+      _needsOrganizerSelection = true;
+      notifyListeners();
+    } else {
+      // Un seul compte ou aucun, passer directement aux praticiens
+      _discoveringOrganizers = false;
+      await _discoverPractitioners();
+    }
+  }
+
+  /// Confirmer la sélection des organisateurs et passer aux praticiens
+  Future<void> confirmOrganizerSelection(List<String> selectedOrganizers) async {
+    _needsOrganizerSelection = false;
+    _discoveringPractitioners = true;
+    notifyListeners();
+
+    try {
+      // Sauvegarder les organisateurs sélectionnés
+      _settings = _settings.copyWith(selectedOrganizers: selectedOrganizers);
+      await _settingsService.saveSettings(_settings);
+
+      // Découvrir les praticiens (filtrés par organisateur)
+      await _discoverPractitioners();
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('Error confirming organizer selection: $e');
+      _discoveringPractitioners = false;
+      notifyListeners();
+    }
+  }
+
+  /// Passer la sélection des organisateurs
+  Future<void> skipOrganizerSelection() async {
+    _needsOrganizerSelection = false;
+    _discoveringPractitioners = true;
+    notifyListeners();
+
+    try {
+      // Vider les organisateurs sélectionnés (= pas de filtre)
+      _settings = _settings.copyWith(selectedOrganizers: []);
+      await _settingsService.saveSettings(_settings);
+
+      await _discoverPractitioners();
+    } catch (e) {
+      _error = e.toString();
+      debugPrint('Error skipping organizer selection: $e');
+      _discoveringPractitioners = false;
+      notifyListeners();
+    }
+  }
+
   /// Découvrir les praticiens dans le calendrier
   Future<void> _discoverPractitioners() async {
+    _discoveringPractitioners = true;
+    _loading = false;
+    notifyListeners();
+
     final startDate = DateTime(2025, 3, 1);
     final endDate = DateTime(2026, 12, 31);
 
     debugPrint('Discovering practitioners...');
+    debugPrint('Account filter: ${_settings.selectedOrganizers}');
     _discoveredPractitioners = await _calendarService.discoverPractitioners(
       startDate: startDate,
       endDate: endDate,
       eventPattern: _settings.eventPattern,
       calendarId: _settings.selectedCalendarId,
+      accountFilter: _settings.selectedOrganizers.isNotEmpty
+          ? _settings.selectedOrganizers
+          : null,
     );
 
     debugPrint('Found ${_discoveredPractitioners.length} practitioners');
+    _discoveringPractitioners = false;
     _needsPractitionerSelection = true;
-    _loading = false;
     notifyListeners();
   }
 
   /// Confirmer la sélection des praticiens et charger les sessions
   Future<void> confirmPractitionerSelection(List<String> selectedPractitioners) async {
-    _loading = true;
+    _loadingSessions = true;
     _needsPractitionerSelection = false;
     notifyListeners();
 
@@ -263,7 +413,7 @@ class SessionProvider extends ChangeNotifier {
       _error = e.toString();
       debugPrint('Error confirming selection: $e');
     } finally {
-      _loading = false;
+      _loadingSessions = false;
       notifyListeners();
     }
   }

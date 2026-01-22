@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'providers/session_provider.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/lock_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +52,7 @@ class SuiviKineApp extends StatelessWidget {
             ),
           ),
         ),
-        home: const DashboardScreen(),
+        home: const LockScreen(child: DashboardScreen()),
       ),
     );
   }

@@ -5,6 +5,7 @@ import '../providers/session_provider.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/session_list.dart';
 import '../widgets/charts.dart';
+import 'settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -51,6 +52,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       )
                     : const Icon(Icons.refresh),
                 onPressed: provider.refreshing ? null : provider.refresh,
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
               );
             },
           ),

@@ -56,6 +56,12 @@ dependencies:
   # Biometric authentication
   local_auth: ^2.3.0
 
+  # Native calendar access
+  device_calendar: ^4.3.3
+
+  # Permissions handling
+  permission_handler: ^11.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

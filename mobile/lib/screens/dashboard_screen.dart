@@ -74,6 +74,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
             );
           }
 
+          if (provider.permissionDenied) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.calendar_month, size: 64, color: Colors.orange[400]),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Accès au calendrier requis',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Pour afficher vos séances de kinésithérapie, l\'application a besoin d\'accéder à votre calendrier.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => provider.requestCalendarPermission(),
+                      icon: const Icon(Icons.lock_open),
+                      label: const Text('Autoriser l\'accès'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           if (provider.error != null) {
             return Center(
               child: Column(

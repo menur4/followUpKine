@@ -47,5 +47,9 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Utilisez Face ID pour accéder à vos données de kinésithérapie</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Accédez à votre calendrier pour voir vos rendez-vous de kinésithérapie</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Accédez à votre calendrier pour voir vos rendez-vous de kinésithérapie</string>
 </dict>
 </plist>

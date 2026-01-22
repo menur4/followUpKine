@@ -3,26 +3,28 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../models/session.dart';
-import '../services/google_calendar_service.dart';
+import '../services/local_calendar_service.dart';
 
 class SessionProvider extends ChangeNotifier {
-  final GoogleCalendarService _calendarService = GoogleCalendarService();
+  final LocalCalendarService _calendarService = LocalCalendarService();
 
   List<Session> _sessions = [];
   bool _loading = true;
   bool _refreshing = false;
   String? _error;
   DateTime? _lastUpdated;
+  bool _permissionDenied = false;
 
   static const String _cacheKey = 'kine_sessions_cache';
   static const String _cacheTimestampKey = 'kine_sessions_cache_timestamp';
-  static const int _cacheExpirationHours = 1;
+  static const int _cacheExpirationMinutes = 5;
 
   List<Session> get sessions => _sessions;
   bool get loading => _loading;
   bool get refreshing => _refreshing;
   String? get error => _error;
   DateTime? get lastUpdated => _lastUpdated;
+  bool get permissionDenied => _permissionDenied;
 
   List<Session> get pastSessions =>
       _sessions.where((s) => !s.isFuture).toList();
@@ -148,10 +150,24 @@ class SessionProvider extends ChangeNotifier {
   Future<void> loadSessions() async {
     _loading = true;
     _error = null;
+    _permissionDenied = false;
     notifyListeners();
 
     try {
-      // Essayer de charger depuis le cache
+      // Vérifier les permissions du calendrier
+      final hasPermission = await _calendarService.hasPermissions();
+      if (!hasPermission) {
+        final granted = await _calendarService.requestPermissions();
+        if (!granted) {
+          _permissionDenied = true;
+          _error = 'Permission d\'accès au calendrier refusée';
+          _loading = false;
+          notifyListeners();
+          return;
+        }
+      }
+
+      // Essayer de charger depuis le cache d'abord
       final cached = await _loadFromCache();
       if (cached != null) {
         _sessions = cached;
@@ -165,12 +181,11 @@ class SessionProvider extends ChangeNotifier {
         return;
       }
 
-      // Pas de cache, charger depuis l'API
-      await _fetchFromApi();
+      // Pas de cache, charger depuis le calendrier local
+      await _fetchFromCalendar();
     } catch (e) {
       _error = e.toString();
-      // En cas d'erreur, utiliser les données mock
-      _sessions = _calendarService.getMockSessions();
+      debugPrint('Error loading sessions: $e');
     } finally {
       _loading = false;
       notifyListeners();
@@ -183,7 +198,7 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _fetchFromApi();
+      await _fetchFromCalendar();
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -192,18 +207,11 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _fetchFromApi() async {
-    final timeMin = DateTime(2025, 3, 1).toUtc().toIso8601String();
-    final timeMax = DateTime(2026, 12, 31).toUtc().toIso8601String();
+  Future<void> _fetchFromCalendar() async {
+    final startDate = DateTime(2025, 3, 1);
+    final endDate = DateTime(2026, 12, 31);
 
-    final events = await _calendarService.fetchCalendarEvents(timeMin, timeMax);
-
-    if (events.isEmpty) {
-      // API non configurée, utiliser les données mock
-      _sessions = _calendarService.getMockSessions();
-    } else {
-      _sessions = _calendarService.parseEventsToSessions(events);
-    }
+    _sessions = await _calendarService.fetchSessions(startDate, endDate);
 
     _lastUpdated = DateTime.now();
     await _saveToCache();
@@ -214,9 +222,9 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _fetchFromApi();
+      await _fetchFromCalendar();
     } catch (e) {
-      print('Background refresh failed: $e');
+      debugPrint('Background refresh failed: $e');
     } finally {
       _refreshing = false;
       notifyListeners();
@@ -249,7 +257,18 @@ class SessionProvider extends ChangeNotifier {
   bool _isCacheExpired() {
     if (_lastUpdated == null) return true;
     final expiration =
-        _lastUpdated!.add(const Duration(hours: _cacheExpirationHours));
+        _lastUpdated!.add(const Duration(minutes: _cacheExpirationMinutes));
     return DateTime.now().isAfter(expiration);
+  }
+
+  /// Request calendar permissions manually
+  Future<bool> requestCalendarPermission() async {
+    final granted = await _calendarService.requestPermissions();
+    if (granted) {
+      _permissionDenied = false;
+      notifyListeners();
+      await loadSessions();
+    }
+    return granted;
   }
 }

@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../models/session.dart';
 import '../models/practitioner_data.dart';
 import '../services/practitioner_data_service.dart';
+import 'action_sheets.dart';
 
 class PractitionerInfo {
   final String name;
@@ -378,41 +379,47 @@ class _FlipPractitionerCardState extends State<_FlipPractitionerCard>
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final source = await showDialog<ImageSource>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Choisir une photo'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Appareil photo'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library),
-              title: const Text('Galerie'),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            if (_currentPhotoPath != null)
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Supprimer', style: TextStyle(color: Colors.red)),
-                onTap: () {
-                  setState(() {
-                    _currentPhotoPath = null;
-                    _newPhotoFile = null;
-                  });
-                  Navigator.pop(context);
-                },
-              ),
-          ],
+
+    final actions = <ActionSheetItem<String>>[
+      ActionSheetItem<String>(
+        label: 'Appareil photo',
+        icon: Icons.camera_alt,
+        value: 'camera',
+      ),
+      ActionSheetItem<String>(
+        label: 'Galerie',
+        icon: Icons.photo_library,
+        value: 'gallery',
+      ),
+      if (_currentPhotoPath != null)
+        ActionSheetItem<String>(
+          label: 'Supprimer la photo',
+          icon: Icons.delete,
+          isDestructive: true,
+          value: 'delete',
         ),
+    ];
+
+    final result = await ActionSheets.show<String>(
+      context: context,
+      title: 'Choisir une photo',
+      actions: actions,
+      cancelAction: ActionSheetItem<String>(
+        label: 'Annuler',
+        value: 'cancel',
       ),
     );
 
-    if (source != null) {
+    if (result == 'delete') {
+      setState(() {
+        _currentPhotoPath = null;
+        _newPhotoFile = null;
+      });
+      return;
+    }
+
+    if (result == 'camera' || result == 'gallery') {
+      final source = result == 'camera' ? ImageSource.camera : ImageSource.gallery;
       final XFile? image = await picker.pickImage(
         source: source,
         maxWidth: 500,

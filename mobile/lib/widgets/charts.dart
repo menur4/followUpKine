@@ -1,19 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/session.dart';
+import '../theme/app_theme.dart';
 
 class MonthlyChart extends StatelessWidget {
   final List<MonthlyStats> stats;
   final List<String> practitioners;
-
-  static const List<Color> _chartColors = [
-    Color(0xFF42A5F5), // blue
-    Color(0xFF66BB6A), // green
-    Color(0xFFFFCA28), // amber
-    Color(0xFFAB47BC), // purple
-    Color(0xFFEF5350), // red
-    Color(0xFF26C6DA), // cyan
-  ];
 
   const MonthlyChart({
     super.key,
@@ -29,16 +21,13 @@ class MonthlyChart extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Évolution mensuelle',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -131,7 +120,7 @@ class MonthlyChart extends StatelessWidget {
                         final practitioner = pEntry.value;
                         return BarChartRodData(
                           toY: stat.getCount(practitioner).toDouble(),
-                          color: _chartColors[pIndex % _chartColors.length],
+                          color: AppColors.chartColors[pIndex % AppColors.chartColors.length],
                           width: 12,
                           borderRadius: const BorderRadius.only(
                             topLeft: Radius.circular(4),
@@ -147,13 +136,13 @@ class MonthlyChart extends StatelessWidget {
             const SizedBox(height: 12),
             Wrap(
               alignment: WrapAlignment.center,
-              spacing: 16,
-              runSpacing: 8,
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.sm,
               children: practitioners.asMap().entries.map((entry) {
                 final index = entry.key;
                 final practitioner = entry.value;
                 return _LegendItem(
-                  color: _chartColors[index % _chartColors.length],
+                  color: AppColors.chartColors[index % AppColors.chartColors.length],
                   label: practitioner,
                 );
               }).toList(),
@@ -168,15 +157,6 @@ class MonthlyChart extends StatelessWidget {
 class PractitionerChart extends StatelessWidget {
   final List<PractitionerStats> stats;
 
-  static const List<Color> _chartColors = [
-    Color(0xFF42A5F5), // blue
-    Color(0xFF66BB6A), // green
-    Color(0xFFFFCA28), // amber
-    Color(0xFFAB47BC), // purple
-    Color(0xFFEF5350), // red
-    Color(0xFF26C6DA), // cyan
-  ];
-
   const PractitionerChart({super.key, required this.stats});
 
   @override
@@ -185,20 +165,19 @@ class PractitionerChart extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final theme = Theme.of(context);
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Répartition par praticien',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: theme.textTheme.headlineSmall,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             SizedBox(
               height: 200,
               child: PieChart(
@@ -209,7 +188,7 @@ class PractitionerChart extends StatelessWidget {
                     final index = entry.key;
                     final stat = entry.value;
                     return PieChartSectionData(
-                      color: _chartColors[index % _chartColors.length],
+                      color: AppColors.chartColors[index % AppColors.chartColors.length],
                       value: stat.count.toDouble(),
                       title: '${stat.percentage.round()}%',
                       radius: 60,
@@ -223,28 +202,28 @@ class PractitionerChart extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             ...stats.asMap().entries.map((entry) {
               final index = entry.key;
               final stat = entry.value;
               return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                 child: Row(
                   children: [
                     Container(
                       width: 12,
                       height: 12,
                       decoration: BoxDecoration(
-                        color: _chartColors[index % _chartColors.length],
+                        color: AppColors.chartColors[index % AppColors.chartColors.length],
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(stat.name),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(stat.name, style: theme.textTheme.bodyMedium),
                     const Spacer(),
                     Text(
                       '${stat.count} séances',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: theme.textTheme.bodySmall,
                     ),
                   ],
                 ),
@@ -269,6 +248,7 @@ class PaymentChart extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final theme = Theme.of(context);
     final paidTotal = stats.paid2025 + stats.paid2026;
     final paidPercentage = (paidTotal / stats.total * 100).round();
 
@@ -276,49 +256,34 @@ class PaymentChart extends StatelessWidget {
       onTap: onTap,
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Statut des paiements',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: theme.textTheme.headlineSmall,
                     ),
                   ),
                   if (onTap != null)
-                    Icon(Icons.chevron_right, color: Colors.grey[400]),
+                    Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
                 ],
               ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 200,
-              child: PieChart(
-                PieChartData(
-                  sectionsSpace: 2,
-                  centerSpaceRadius: 40,
-                  sections: [
-                    PieChartSectionData(
-                      color: Colors.green[400],
-                      value: paidTotal.toDouble(),
-                      title: '$paidPercentage%',
-                      radius: 60,
-                      titleStyle: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    if (stats.pending > 0)
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                height: 200,
+                child: PieChart(
+                  PieChartData(
+                    sectionsSpace: 2,
+                    centerSpaceRadius: 40,
+                    sections: [
                       PieChartSectionData(
-                        color: Colors.orange[400],
-                        value: stats.pending.toDouble(),
-                        title: '${100 - paidPercentage}%',
+                        color: AppColors.success,
+                        value: paidTotal.toDouble(),
+                        title: '$paidPercentage%',
                         radius: 60,
                         titleStyle: const TextStyle(
                           fontSize: 14,
@@ -326,16 +291,27 @@ class PaymentChart extends StatelessWidget {
                           color: Colors.white,
                         ),
                       ),
-                  ],
+                      if (stats.pending > 0)
+                        PieChartSectionData(
+                          color: AppColors.warning,
+                          value: stats.pending.toDouble(),
+                          title: '${100 - paidPercentage}%',
+                          radius: 60,
+                          titleStyle: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-              _LegendItem(color: Colors.green[400]!, label: 'Payées ($paidTotal)'),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.sm),
+              _LegendItem(color: AppColors.success, label: 'Payées ($paidTotal)'),
+              const SizedBox(height: AppSpacing.xs),
               if (stats.pending > 0)
-                _LegendItem(
-                    color: Colors.orange[400]!, label: 'En attente (${stats.pending})'),
+                _LegendItem(color: AppColors.warning, label: 'En attente (${stats.pending})'),
             ],
           ),
         ),
@@ -360,13 +336,13 @@ class _LegendItem extends StatelessWidget {
           height: 12,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(AppSpacing.xs),
           ),
         ),
-        const SizedBox(width: 6),
+        const SizedBox(width: AppSpacing.sm),
         Text(
           label,
-          style: const TextStyle(fontSize: 12),
+          style: Theme.of(context).textTheme.labelMedium,
         ),
       ],
     );

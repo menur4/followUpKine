@@ -6,7 +6,7 @@ import 'screens/dashboard_screen.dart';
 import 'screens/lock_screen.dart';
 import 'screens/calendar_source_screen.dart';
 import 'services/settings_service.dart';
-import 'models/app_settings.dart';
+import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,24 +29,9 @@ class SuiviKineApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Mes Séances',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.black,
-            primary: Colors.black,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.black,
-            foregroundColor: Colors.white,
-            elevation: 0,
-          ),
-          cardTheme: CardThemeData(
-            elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
+        theme: AppTheme.lightTheme(),
+        darkTheme: AppTheme.darkTheme(),
+        themeMode: ThemeMode.system,
         home: const AppRouter(),
       ),
     );

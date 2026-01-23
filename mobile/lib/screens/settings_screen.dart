@@ -13,6 +13,8 @@ import '../services/ics_calendar_service.dart';
 import '../services/practitioner_data_service.dart';
 import '../models/app_settings.dart';
 import '../providers/session_provider.dart';
+import '../theme/app_theme.dart';
+import '../services/haptic_service.dart';
 import 'calendar_selection_screen.dart';
 import 'practitioner_selection_screen.dart';
 
@@ -61,6 +63,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
 
+    HapticService.mediumImpact();
     await _authService.setBiometricEnabled(value);
     setState(() {
       _biometricEnabled = value;
@@ -106,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Calendrier mis à jour'),
-                  backgroundColor: Colors.green,
+                  backgroundColor: AppColors.success,
                 ),
               );
             }
@@ -137,7 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Praticiens mis à jour'),
-                    backgroundColor: Colors.green,
+                    backgroundColor: AppColors.success,
                   ),
                 );
               }
@@ -164,7 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.warning),
             child: const Text('Vider le cache'),
           ),
         ],
@@ -172,6 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirm == true) {
+      HapticService.warning();
       setState(() => _loading = true);
 
       try {
@@ -201,7 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Cache vidé avec succès'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success,
             ),
           );
         }
@@ -210,7 +214,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Erreur: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
             ),
           );
         }
@@ -242,6 +246,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirm == true) {
+      HapticService.warning();
       await _settingsService.resetSettings();
 
       if (mounted) {
@@ -267,7 +272,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Text(
               'Vous allez marquer $count séance${count > 1 ? 's' : ''} de $year comme payée${count > 1 ? 's' : ''}.',
-              style: TextStyle(color: Colors.grey[600]),
+              style: const TextStyle(color: AppColors.textSecondaryLight),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -288,7 +293,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.green),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.success),
             child: const Text('Confirmer'),
           ),
         ],
@@ -296,6 +301,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
 
     if (confirmed == true && mounted) {
+      HapticService.success();
       final provider = context.read<SessionProvider>();
       final sessions = provider.getUnpaidSessionsByYear(year);
       final label = labelController.text.trim().isEmpty
@@ -311,7 +317,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('$count séance${count > 1 ? 's' : ''} marquée${count > 1 ? 's' : ''} comme payée${count > 1 ? 's' : ''}'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
       }
@@ -332,7 +338,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const Text(
               'Entrez le motif pour détecter les événements à suivre. '
               'Utilisez | pour séparer plusieurs motifs.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: AppColors.textTertiaryLight),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -368,7 +374,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Motif mis à jour'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
       }
@@ -445,7 +451,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Permission calendrier refusée'),
-                  backgroundColor: Colors.red,
+                  backgroundColor: AppColors.error,
                 ),
               );
             }
@@ -462,7 +468,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Aucun calendrier trouvé'),
-                backgroundColor: Colors.orange,
+                backgroundColor: AppColors.warning,
               ),
             );
             return;
@@ -492,7 +498,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Source de calendrier mise à jour'),
-                        backgroundColor: Colors.green,
+                        backgroundColor: AppColors.success,
                       ),
                     );
                   }
@@ -506,7 +512,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Erreur: $e'),
-                backgroundColor: Colors.red,
+                backgroundColor: AppColors.error,
               ),
             );
           }
@@ -539,7 +545,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             const Text(
               'Entrez l\'URL de votre calendrier ICS.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 12, color: AppColors.textTertiaryLight),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -590,7 +596,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('URL du calendrier mise à jour'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success,
             ),
           );
         }
@@ -599,7 +605,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Impossible d\'accéder au calendrier: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
             ),
           );
         }
@@ -641,7 +647,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Fichier ICS importé'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success,
             ),
           );
         }
@@ -651,7 +657,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Erreur lors de l\'importation: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -662,6 +668,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Paramètres'),
@@ -670,227 +677,451 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
+                const SizedBox(height: AppSpacing.sm),
+
                 // Section Source calendrier
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'Source du calendrier',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey,
+                _SettingsSection(
+                  header: 'SOURCE DU CALENDRIER',
+                  footer: 'Sélectionnez la source de vos événements de calendrier.',
+                  children: [
+                    _SettingsTile(
+                      icon: _getSourceIcon(),
+                      title: 'Type de source',
+                      subtitle: _appSettings.calendarSourceDescription,
+                      trailing: _SettingsChevron(),
+                      onTap: _showChangeSourceDialog,
                     ),
-                  ),
+                    if (_appSettings.calendarSourceType == CalendarSourceType.internal)
+                      _SettingsTile(
+                        icon: Icons.calendar_month,
+                        title: 'Calendrier',
+                        subtitle: _appSettings.selectedCalendarName ?? 'Tous les calendriers',
+                        trailing: _SettingsChevron(),
+                        onTap: _changeCalendar,
+                        showDivider: false,
+                      ),
+                    if (_appSettings.calendarSourceType == CalendarSourceType.url)
+                      _SettingsTile(
+                        icon: Icons.link,
+                        title: 'URL du calendrier',
+                        subtitle: _appSettings.icsUrl ?? 'Non configuré',
+                        trailing: _SettingsChevron(),
+                        onTap: _editIcsUrl,
+                        showDivider: false,
+                      ),
+                    if (_appSettings.calendarSourceType == CalendarSourceType.file)
+                      _SettingsTile(
+                        icon: Icons.upload_file,
+                        title: 'Fichier ICS',
+                        subtitle: _appSettings.icsFilePath?.split('/').last ?? 'Non configuré',
+                        trailing: _SettingsChevron(),
+                        onTap: _changeIcsFile,
+                        showDivider: false,
+                      ),
+                  ],
                 ),
-                ListTile(
-                  leading: Icon(_getSourceIcon()),
-                  title: const Text('Type de source'),
-                  subtitle: Text(
-                    _appSettings.calendarSourceDescription,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _showChangeSourceDialog,
-                ),
-                if (_appSettings.calendarSourceType == CalendarSourceType.internal)
-                  ListTile(
-                    leading: const Icon(Icons.calendar_month),
-                    title: const Text('Calendrier'),
-                    subtitle: Text(
-                      _appSettings.selectedCalendarName ?? 'Tous les calendriers',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: _changeCalendar,
-                  ),
-                if (_appSettings.calendarSourceType == CalendarSourceType.url)
-                  ListTile(
-                    leading: const Icon(Icons.link),
-                    title: const Text('URL du calendrier'),
-                    subtitle: Text(
-                      _appSettings.icsUrl ?? 'Non configuré',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: const Icon(Icons.edit),
-                    onTap: _editIcsUrl,
-                  ),
-                if (_appSettings.calendarSourceType == CalendarSourceType.file)
-                  ListTile(
-                    leading: const Icon(Icons.upload_file),
-                    title: const Text('Fichier ICS'),
-                    subtitle: Text(
-                      _appSettings.icsFilePath?.split('/').last ?? 'Non configuré',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: const Icon(Icons.edit),
-                    onTap: _changeIcsFile,
-                  ),
-                const Divider(),
 
                 // Section Filtres
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'Filtres',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey,
+                _SettingsSection(
+                  header: 'FILTRES',
+                  footer: 'Configurez les praticiens et le motif de recherche pour filtrer vos séances.',
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.person,
+                      title: 'Praticiens suivis',
+                      subtitle: _appSettings.selectedPractitioners.isEmpty
+                          ? 'Aucun praticien sélectionné'
+                          : _appSettings.selectedPractitioners.join(', '),
+                      trailing: _SettingsChevron(),
+                      onTap: _changePractitioners,
                     ),
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.person),
-                  title: const Text('Praticiens suivis'),
-                  subtitle: Text(
-                    _appSettings.selectedPractitioners.isEmpty
-                        ? 'Aucun praticien sélectionné'
-                        : _appSettings.selectedPractitioners.join(', '),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _changePractitioners,
-                ),
-                ListTile(
-                  leading: const Icon(Icons.text_fields),
-                  title: const Text('Motif des événements'),
-                  subtitle: Text(
-                    _appSettings.eventPattern,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: const Icon(Icons.edit),
-                  onTap: _editEventPattern,
-                ),
-                const Divider(),
-
-                // Section Données
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'Données',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey,
+                    _SettingsTile(
+                      icon: Icons.text_fields,
+                      title: 'Motif des événements',
+                      subtitle: _appSettings.eventPattern,
+                      trailing: _SettingsChevron(),
+                      onTap: _editEventPattern,
+                      showDivider: false,
                     ),
-                  ),
+                  ],
                 ),
-                ListTile(
-                  leading: const Icon(Icons.cleaning_services, color: Colors.blue),
-                  title: const Text('Vider le cache'),
-                  subtitle: const Text('Supprimer les données temporaires'),
-                  onTap: _clearCache,
-                ),
-                ListTile(
-                  leading: const Icon(Icons.refresh, color: Colors.orange),
-                  title: const Text('Réinitialiser la configuration'),
-                  subtitle: const Text('Relancer la sélection des praticiens'),
-                  onTap: _resetSetup,
-                ),
-                const Divider(),
 
                 // Section Paiements en masse
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'Paiements en masse',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ),
                 Consumer<SessionProvider>(
                   builder: (context, provider, _) {
                     final unpaid2025 = provider.getUnpaidSessionsByYear(2025);
                     final unpaid2026 = provider.getUnpaidSessionsByYear(2026);
 
-                    return Column(
+                    return _SettingsSection(
+                      header: 'PAIEMENTS EN MASSE',
+                      footer: 'Marquez rapidement toutes les séances d\'une année comme payées.',
                       children: [
-                        ListTile(
-                          leading: const Icon(Icons.check_circle, color: Colors.green),
-                          title: const Text('Marquer 2025 comme payé'),
-                          subtitle: Text(
-                            unpaid2025.isEmpty
-                                ? 'Toutes les séances 2025 sont payées'
-                                : '${unpaid2025.length} séance${unpaid2025.length > 1 ? 's' : ''} non payée${unpaid2025.length > 1 ? 's' : ''}',
-                          ),
+                        _SettingsTile(
+                          icon: Icons.check_circle,
+                          iconColor: AppColors.success,
+                          title: 'Marquer 2025 comme payé',
+                          subtitle: unpaid2025.isEmpty
+                              ? 'Toutes les séances sont payées'
+                              : '${unpaid2025.length} séance${unpaid2025.length > 1 ? 's' : ''} en attente',
                           trailing: unpaid2025.isEmpty
-                              ? const Icon(Icons.check, color: Colors.green)
+                              ? Icon(Icons.check_circle, color: AppColors.success, size: 20)
                               : null,
                           enabled: unpaid2025.isNotEmpty,
                           onTap: unpaid2025.isEmpty
                               ? null
                               : () => _showBulkPaymentDialog(2025, unpaid2025.length),
                         ),
-                        ListTile(
-                          leading: const Icon(Icons.check_circle, color: Colors.green),
-                          title: const Text('Marquer 2026 comme payé'),
-                          subtitle: Text(
-                            unpaid2026.isEmpty
-                                ? 'Toutes les séances 2026 sont payées'
-                                : '${unpaid2026.length} séance${unpaid2026.length > 1 ? 's' : ''} non payée${unpaid2026.length > 1 ? 's' : ''}',
-                          ),
+                        _SettingsTile(
+                          icon: Icons.check_circle,
+                          iconColor: AppColors.success,
+                          title: 'Marquer 2026 comme payé',
+                          subtitle: unpaid2026.isEmpty
+                              ? 'Toutes les séances sont payées'
+                              : '${unpaid2026.length} séance${unpaid2026.length > 1 ? 's' : ''} en attente',
                           trailing: unpaid2026.isEmpty
-                              ? const Icon(Icons.check, color: Colors.green)
+                              ? Icon(Icons.check_circle, color: AppColors.success, size: 20)
                               : null,
                           enabled: unpaid2026.isNotEmpty,
                           onTap: unpaid2026.isEmpty
                               ? null
                               : () => _showBulkPaymentDialog(2026, unpaid2026.length),
+                          showDivider: false,
                         ),
                       ],
                     );
                   },
                 ),
-                const Divider(),
 
                 // Section Sécurité
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'Sécurité',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey,
+                _SettingsSection(
+                  header: 'SÉCURITÉ',
+                  footer: _biometricAvailable
+                      ? 'Protégez l\'accès à vos données avec Face ID ou votre empreinte digitale.'
+                      : 'L\'authentification biométrique n\'est pas configurée sur cet appareil.',
+                  children: [
+                    _SettingsSwitchTile(
+                      icon: Icons.fingerprint,
+                      title: 'Authentification biométrique',
+                      subtitle: _biometricAvailable
+                          ? 'Face ID ou empreinte digitale'
+                          : 'Non disponible',
+                      value: _biometricEnabled,
+                      onChanged: _biometricAvailable ? _toggleBiometric : null,
+                      showDivider: false,
                     ),
-                  ),
+                  ],
                 ),
-                SwitchListTile(
-                  title: const Text('Authentification biométrique'),
-                  subtitle: Text(
-                    _biometricAvailable
-                        ? 'Utiliser Face ID ou empreinte digitale'
-                        : 'Non disponible sur cet appareil',
-                  ),
-                  value: _biometricEnabled,
-                  onChanged: _biometricAvailable ? _toggleBiometric : null,
-                  secondary: Icon(
-                    Icons.fingerprint,
-                    color: _biometricAvailable ? null : Colors.grey,
-                  ),
-                ),
-                if (!_biometricAvailable)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Text(
-                      'L\'authentification biométrique n\'est pas configurée sur cet appareil.',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.orange,
-                      ),
+
+                // Section Données (actions potentiellement destructives)
+                _SettingsSection(
+                  header: 'DONNÉES',
+                  children: [
+                    _SettingsTile(
+                      icon: Icons.cached,
+                      title: 'Vider le cache',
+                      subtitle: 'Supprimer les données temporaires',
+                      onTap: _clearCache,
                     ),
-                  ),
+                    _SettingsTile(
+                      icon: Icons.restart_alt,
+                      iconColor: AppColors.error,
+                      title: 'Réinitialiser',
+                      titleColor: AppColors.error,
+                      subtitle: 'Effacer les paramètres et recommencer',
+                      onTap: _resetSetup,
+                      showDivider: false,
+                    ),
+                  ],
+                ),
+
+                // Espace en bas
+                const SizedBox(height: AppSpacing.xxl),
               ],
             ),
+    );
+  }
+}
+
+/// Section groupée style iOS avec coins arrondis
+class _SettingsSection extends StatelessWidget {
+  final String? header;
+  final String? footer;
+  final List<Widget> children;
+
+  const _SettingsSection({
+    this.header,
+    this.footer,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (header != null) ...[
+            Padding(
+              padding: const EdgeInsets.only(
+                left: AppSpacing.md,
+                top: AppSpacing.lg,
+                bottom: AppSpacing.sm,
+              ),
+              child: Text(
+                header!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ],
+          Container(
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: theme.dividerColor.withValues(alpha: 0.5),
+                width: 0.5,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Column(
+                children: children,
+              ),
+            ),
+          ),
+          if (footer != null) ...[
+            Padding(
+              padding: const EdgeInsets.only(
+                left: AppSpacing.md,
+                top: AppSpacing.sm,
+                bottom: AppSpacing.sm,
+              ),
+              child: Text(
+                footer!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Tuile de paramètre style iOS
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final Color? iconColor;
+  final String title;
+  final Color? titleColor;
+  final String subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final bool enabled;
+  final bool showDivider;
+
+  const _SettingsTile({
+    required this.icon,
+    this.iconColor,
+    required this.title,
+    this.titleColor,
+    required this.subtitle,
+    this.trailing,
+    this.onTap,
+    this.enabled = true,
+    this.showDivider = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final effectiveIconColor = iconColor ?? theme.colorScheme.primary;
+    final effectiveTitleColor = titleColor ?? theme.colorScheme.onSurface;
+
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: enabled ? onTap : null,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm + 2,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: effectiveIconColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 18,
+                      color: enabled
+                          ? effectiveIconColor
+                          : effectiveIconColor.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm + 4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: enabled
+                                ? effectiveTitleColor
+                                : effectiveTitleColor.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        Text(
+                          subtitle,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: enabled ? 0.6 : 0.4,
+                            ),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (trailing != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    trailing!,
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (showDivider)
+          Padding(
+            padding: const EdgeInsets.only(left: 54),
+            child: Divider(height: 1, thickness: 0.5),
+          ),
+      ],
+    );
+  }
+}
+
+/// Switch tile style iOS
+class _SettingsSwitchTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  final bool showDivider;
+
+  const _SettingsSwitchTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    this.onChanged,
+    this.showDivider = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final enabled = onChanged != null;
+
+    return Column(
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: enabled ? () => onChanged!(!value) : null,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm + 2,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 18,
+                      color: enabled
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.primary.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm + 4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: enabled
+                                ? theme.colorScheme.onSurface
+                                : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        Text(
+                          subtitle,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: enabled ? 0.6 : 0.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Switch.adaptive(
+                    value: value,
+                    onChanged: onChanged,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (showDivider)
+          Padding(
+            padding: const EdgeInsets.only(left: 54),
+            child: Divider(height: 1, thickness: 0.5),
+          ),
+      ],
+    );
+  }
+}
+
+/// Chevron de navigation style iOS
+class _SettingsChevron extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      Icons.chevron_right,
+      size: 20,
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
     );
   }
 }

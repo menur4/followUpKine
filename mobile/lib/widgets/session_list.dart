@@ -3,6 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/session.dart';
 import '../providers/session_provider.dart';
+import '../services/haptic_service.dart';
+import '../theme/app_theme.dart';
+import 'action_sheets.dart';
 
 class SessionList extends StatefulWidget {
   final String title;
@@ -93,96 +96,73 @@ class _SessionListState extends State<SessionList> {
     final labelController = TextEditingController(
       text: 'Payé le ${DateFormat('dd/MM/yy', 'fr_FR').format(DateTime.now())}',
     );
-
     final ignoredCount = _selectedIds.length - unpaidIds.length;
 
-    showDialog(
+    ActionSheets.showWithContent<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('Marquer ${unpaidIds.length} séance${unpaidIds.length > 1 ? 's' : ''} comme payée${unpaidIds.length > 1 ? 's' : ''}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Vous allez marquer ${unpaidIds.length} séance${unpaidIds.length > 1 ? 's' : ''} comme payée${unpaidIds.length > 1 ? 's' : ''}.',
-              style: TextStyle(color: Colors.grey[600]),
+      title: 'Marquer ${unpaidIds.length} séance${unpaidIds.length > 1 ? 's' : ''} comme payée${unpaidIds.length > 1 ? 's' : ''}',
+      subtitle: ignoredCount > 0
+          ? '$ignoredCount séance${ignoredCount > 1 ? 's' : ''} déjà payée${ignoredCount > 1 ? 's' : ''} ignorée${ignoredCount > 1 ? 's' : ''}.'
+          : null,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          TextField(
+            controller: labelController,
+            decoration: const InputDecoration(
+              labelText: 'Label (optionnel)',
+              hintText: 'Ex: Payé le 22/01/26',
+              border: OutlineInputBorder(),
             ),
-            if (ignoredCount > 0) ...[
-              const SizedBox(height: 8),
-              Text(
-                '$ignoredCount séance${ignoredCount > 1 ? 's' : ''} déjà payée${ignoredCount > 1 ? 's' : ''} ignorée${ignoredCount > 1 ? 's' : ''}.',
-                style: TextStyle(
-                  color: Colors.orange[700],
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            TextField(
-              controller: labelController,
-              decoration: const InputDecoration(
-                labelText: 'Label (optionnel)',
-                hintText: 'Ex: Payé le 22/01/26',
-                border: OutlineInputBorder(),
-              ),
-              textCapitalization: TextCapitalization.sentences,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Annuler'),
+            textCapitalization: TextCapitalization.sentences,
+            autofocus: true,
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              final label = labelController.text.trim().isEmpty
-                  ? null
-                  : labelController.text.trim();
-              context.read<SessionProvider>().markMultipleSessionsAsPaid(
-                unpaidIds,
-                label: label,
-              );
-              _exitSelectionMode();
-            },
-            style: FilledButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('Confirmer'),
-          ),
+          const SizedBox(height: 8),
         ],
       ),
+      buttons: [
+        ActionSheetButton<bool>(
+          label: 'Annuler',
+          value: false,
+        ),
+        ActionSheetButton<bool>(
+          label: 'Confirmer',
+          isPrimary: true,
+          backgroundColor: AppColors.success,
+          onTap: () {
+            HapticService.success();
+            Navigator.pop(context);
+            final label = labelController.text.trim().isEmpty
+                ? null
+                : labelController.text.trim();
+            context.read<SessionProvider>().markMultipleSessionsAsPaid(
+              unpaidIds,
+              label: label,
+            );
+            _exitSelectionMode();
+          },
+        ),
+      ],
     );
   }
 
-  void _showBulkUnpaidDialog() {
-    showDialog(
+  void _showBulkUnpaidDialog() async {
+    final confirmed = await ActionSheets.showDestructiveConfirmation(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Annuler les paiements'),
-        content: Text(
-          'Voulez-vous annuler le paiement de ${_selectedIds.length} séance${_selectedIds.length > 1 ? 's' : ''} ?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              context.read<SessionProvider>().markMultipleSessionsAsUnpaid(
-                _selectedIds.toList(),
-              );
-              _exitSelectionMode();
-            },
-            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('Confirmer'),
-          ),
-        ],
-      ),
+      title: 'Annuler les paiements',
+      message: 'Voulez-vous annuler le paiement de ${_selectedIds.length} séance${_selectedIds.length > 1 ? 's' : ''} ?',
+      destructiveLabel: 'Annuler les paiements',
+      cancelLabel: 'Annuler',
     );
+
+    if (confirmed == true) {
+      HapticService.warning();
+      context.read<SessionProvider>().markMultipleSessionsAsUnpaid(
+        _selectedIds.toList(),
+      );
+      _exitSelectionMode();
+    }
   }
 
   @override
@@ -365,100 +345,74 @@ class _SessionListState extends State<SessionList> {
     );
   }
 
-  void _showSinglePaymentDialog(Session session) {
+  void _showSinglePaymentDialog(Session session) async {
     final dateFormat = DateFormat('d MMMM yyyy', 'fr_FR');
-    final labelController = TextEditingController(
-      text: 'Payé le ${DateFormat('dd/MM/yy', 'fr_FR').format(DateTime.now())}',
-    );
 
     if (session.paid) {
-      // Dialog pour annuler le paiement
-      showDialog(
+      // Action sheet pour annuler le paiement
+      final confirmed = await ActionSheets.showDestructiveConfirmation(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Annuler le paiement ?'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Voulez-vous annuler le paiement de la séance du ${dateFormat.format(session.date)} ?',
-              ),
-              if (session.paymentLabel != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Label actuel : ${session.paymentLabel}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Annuler'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                context.read<SessionProvider>().markSessionAsUnpaid(session.id);
-              },
-              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-              child: const Text('Annuler paiement'),
-            ),
-          ],
-        ),
+        title: 'Annuler le paiement ?',
+        message: session.paymentLabel != null
+            ? 'Séance du ${dateFormat.format(session.date)}\nLabel : ${session.paymentLabel}'
+            : 'Séance du ${dateFormat.format(session.date)}',
+        destructiveLabel: 'Annuler le paiement',
+        cancelLabel: 'Annuler',
       );
+
+      if (confirmed == true) {
+        HapticService.warning();
+        context.read<SessionProvider>().markSessionAsUnpaid(session.id);
+      }
     } else {
-      // Dialog pour marquer comme payé avec label
-      showDialog(
+      // Action sheet pour marquer comme payée
+      final labelController = TextEditingController(
+        text: 'Payé le ${DateFormat('dd/MM/yy', 'fr_FR').format(DateTime.now())}',
+      );
+
+      ActionSheets.showWithContent<bool>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Marquer comme payée'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Séance du ${dateFormat.format(session.date)}',
-                style: TextStyle(color: Colors.grey[600]),
+        title: 'Marquer comme payée',
+        subtitle: 'Séance du ${dateFormat.format(session.date)}',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            TextField(
+              controller: labelController,
+              decoration: const InputDecoration(
+                labelText: 'Label (optionnel)',
+                hintText: 'Ex: Payé le 22/01/26',
+                border: OutlineInputBorder(),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: labelController,
-                decoration: const InputDecoration(
-                  labelText: 'Label (optionnel)',
-                  hintText: 'Ex: Payé le 22/01/26',
-                  border: OutlineInputBorder(),
-                ),
-                textCapitalization: TextCapitalization.sentences,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Annuler'),
+              textCapitalization: TextCapitalization.sentences,
+              autofocus: true,
             ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                final label = labelController.text.trim().isEmpty
-                    ? null
-                    : labelController.text.trim();
-                context.read<SessionProvider>().markSessionAsPaid(
-                  session.id,
-                  label: label,
-                );
-              },
-              style: FilledButton.styleFrom(backgroundColor: Colors.green),
-              child: const Text('Marquer payée'),
-            ),
+            const SizedBox(height: 8),
           ],
         ),
+        buttons: [
+          ActionSheetButton<bool>(
+            label: 'Annuler',
+            value: false,
+          ),
+          ActionSheetButton<bool>(
+            label: 'Marquer payée',
+            isPrimary: true,
+            backgroundColor: AppColors.success,
+            onTap: () {
+              HapticService.success();
+              Navigator.pop(context);
+              final label = labelController.text.trim().isEmpty
+                  ? null
+                  : labelController.text.trim();
+              context.read<SessionProvider>().markSessionAsPaid(
+                session.id,
+                label: label,
+              );
+            },
+          ),
+        ],
       );
     }
   }

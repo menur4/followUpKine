@@ -7,6 +7,8 @@ import '../models/app_settings.dart';
 import '../services/ics_calendar_service.dart';
 import '../services/local_calendar_service.dart';
 import '../services/settings_service.dart';
+import '../theme/app_theme.dart';
+import '../services/haptic_service.dart';
 import 'calendar_selection_screen.dart';
 import 'practitioner_selection_screen.dart';
 
@@ -257,6 +259,7 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
   }
 
   Future<void> _finishSetup() async {
+    HapticService.success();
     setState(() => _loading = true);
 
     try {
@@ -319,6 +322,7 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
   }
 
   void _showIcsOptions() {
+    final theme = Theme.of(context);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -326,27 +330,23 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
       ),
       builder: (context) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Importer un calendrier ICS',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: theme.textTheme.headlineMedium,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 'Comment souhaitez-vous importer votre calendrier ?',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               _IcsOptionTile(
                 icon: Icons.upload_file,
                 title: 'Depuis un fichier',
@@ -356,7 +356,7 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
                   _selectIcsFile();
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.sm),
               _IcsOptionTile(
                 icon: Icons.link,
                 title: 'Depuis une URL',
@@ -366,7 +366,7 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
                   _goToStep(1);
                 },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
             ],
           ),
         ),
@@ -375,55 +375,52 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
   }
 
   Widget _buildSourceSelection() {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 40),
+          const SizedBox(height: AppSpacing.xxl),
 
           // Logo/Icon
           Center(
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.calendar_month,
                 size: 48,
-                color: Theme.of(context).primaryColor,
+                color: theme.colorScheme.primary,
               ),
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.xl),
 
-          const Center(
+          Center(
             child: Text(
               'Bienvenue !',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
+              style: theme.textTheme.displayMedium,
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
 
           Center(
             child: Text(
               'Choisissez la source de votre calendrier',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
             ),
           ),
 
-          const SizedBox(height: 48),
+          const SizedBox(height: AppSpacing.xxl),
 
           // Option 1: Calendrier du téléphone
           _SourceOption(
@@ -433,7 +430,7 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
             onTap: _selectInternalCalendar,
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
 
           // Option 2: Fichier ICS (fichier ou URL)
           _SourceOption(
@@ -444,21 +441,21 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
           ),
 
           if (_error != null) ...[
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.sm),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                color: AppColors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.smallRadius),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 20),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       _error!,
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(color: AppColors.error),
                     ),
                   ),
                 ],
@@ -471,8 +468,9 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
   }
 
   Widget _buildUrlInput() {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -482,27 +480,23 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
             onPressed: () => _goToStep(0),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.lg),
 
-          const Text(
+          Text(
             'URL du calendrier',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+            style: theme.textTheme.headlineLarge,
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
 
           Text(
             'Entrez l\'URL de votre calendrier ICS',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.xl),
 
           TextField(
             controller: _urlController,
@@ -510,17 +504,16 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
               labelText: 'URL du calendrier',
               hintText: 'https://example.com/calendar.ics',
               prefixIcon: Icon(Icons.link),
-              border: OutlineInputBorder(),
             ),
             keyboardType: TextInputType.url,
             autocorrect: false,
           ),
 
           if (_error != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Text(
               _error!,
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: AppColors.error),
             ),
           ],
 
@@ -530,10 +523,7 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
             width: double.infinity,
             child: FilledButton(
               onPressed: _validateUrl,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('Continuer'),
-              ),
+              child: const Text('Continuer'),
             ),
           ),
         ],
@@ -542,8 +532,9 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
   }
 
   Widget _buildPatternInput() {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -553,28 +544,24 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
             onPressed: () => _goToStep(0),
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.lg),
 
-          const Text(
+          Text(
             'Motif des événements',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
+            style: theme.textTheme.headlineLarge,
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
 
           Text(
             'Entrez le texte qui permet d\'identifier vos rendez-vous. '
             'Utilisez | pour séparer plusieurs motifs.',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: AppSpacing.xl),
 
           TextField(
             controller: _patternController,
@@ -582,17 +569,16 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
               labelText: 'Motif de recherche',
               hintText: 'rdv chez|rendez-vous chez',
               prefixIcon: Icon(Icons.search),
-              border: OutlineInputBorder(),
               helperText: 'Exemple: "rdv chez Dr Martin" sera détecté avec le motif "rdv chez"',
               helperMaxLines: 2,
             ),
           ),
 
           if (_error != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             Text(
               _error!,
-              style: const TextStyle(color: Colors.red),
+              style: TextStyle(color: AppColors.error),
             ),
           ],
 
@@ -602,10 +588,7 @@ class _CalendarSourceScreenState extends State<CalendarSourceScreen> {
             width: double.infinity,
             child: FilledButton(
               onPressed: _discoverPractitioners,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Text('Rechercher les praticiens'),
-              ),
+              child: const Text('Rechercher les praticiens'),
             ),
           ),
         ],
@@ -644,57 +627,54 @@ class _SourceOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
+        side: BorderSide(color: theme.dividerColor),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   icon,
-                  color: Theme.of(context).primaryColor,
+                  color: theme.colorScheme.primary,
                   size: 24,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 16,
+                      style: theme.textTheme.labelLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
+                      style: theme.textTheme.bodySmall,
                     ),
                   ],
                 ),
               ),
               Icon(
                 Icons.chevron_right,
-                color: Colors.grey[400],
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
               ),
             ],
           ),
@@ -719,55 +699,52 @@ class _IcsOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!),
-          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: theme.dividerColor),
+          borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 icon,
-                color: Theme.of(context).primaryColor,
+                color: theme.colorScheme.primary,
                 size: 22,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      fontSize: 15,
+                    style: theme.textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
+                    style: theme.textTheme.bodySmall,
                   ),
                 ],
               ),
             ),
             Icon(
               Icons.chevron_right,
-              color: Colors.grey[400],
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
               size: 20,
             ),
           ],

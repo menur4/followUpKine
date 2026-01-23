@@ -5,6 +5,7 @@ import '../widgets/stat_card.dart';
 import '../widgets/charts_carousel.dart';
 import '../widgets/sessions_carousel.dart';
 import '../widgets/practitioners_carousel.dart';
+import '../widgets/skeleton_loaders.dart';
 import 'settings_screen.dart';
 import 'calendar_selection_screen.dart';
 import 'organizer_selection_screen.dart';
@@ -72,9 +73,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: Consumer<SessionProvider>(
         builder: (context, provider, _) {
           if (provider.loading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const DashboardLoadingSkeleton();
           }
 
           // Chargement des calendriers

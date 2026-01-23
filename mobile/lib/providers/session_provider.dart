@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:device_calendar/device_calendar.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,11 +7,15 @@ import 'package:intl/intl.dart';
 import '../models/session.dart';
 import '../models/app_settings.dart';
 import '../services/local_calendar_service.dart';
+import '../services/ics_calendar_service.dart';
 import '../services/settings_service.dart';
+import '../services/payment_service.dart';
 
 class SessionProvider extends ChangeNotifier {
   final LocalCalendarService _calendarService = LocalCalendarService();
+  final IcsCalendarService _icsService = IcsCalendarService();
   final SettingsService _settingsService = SettingsService();
+  final PaymentService _paymentService = PaymentService();
 
   List<Session> _sessions = [];
   bool _loading = true;
@@ -206,45 +211,32 @@ class SessionProvider extends ChangeNotifier {
       // Charger les paramètres
       _settings = await _settingsService.loadSettings();
       debugPrint('Settings loaded: hasCompletedSetup=${_settings.hasCompletedSetup}');
+      debugPrint('Calendar source type: ${_settings.calendarSourceType}');
       debugPrint('Selected practitioners: ${_settings.selectedPractitioners}');
 
-      // Si le setup est complété, essayer de charger depuis le cache
-      if (_settings.hasCompletedSetup) {
-        final cached = await _loadFromCache();
-        if (cached != null && cached.isNotEmpty) {
-          _sessions = cached;
-          _loading = false;
-          notifyListeners();
-
-          // Rafraîchir en arrière-plan si le cache est expiré
-          if (_isCacheExpired()) {
-            _refreshInBackground();
-          }
-          return;
-        }
-      }
-
-      // Vérifier les permissions
-      final hasPermission = await _calendarService.hasPermissions();
-      if (!hasPermission) {
-        final granted = await _calendarService.requestPermissions();
-        if (!granted) {
-          _permissionDenied = true;
-          _error = 'Permission d\'accès au calendrier refusée';
-          _loading = false;
-          notifyListeners();
-          return;
-        }
-      }
-
-      // Si le setup n'est pas complété, commencer par la sélection du calendrier
+      // Si le setup n'est pas complété, ne rien faire (l'écran de config gère ça)
       if (!_settings.hasCompletedSetup) {
-        await _loadCalendars();
+        _loading = false;
+        notifyListeners();
         return;
       }
 
-      // Charger depuis le calendrier local
-      await _fetchFromCalendar();
+      // Si le setup est complété, essayer de charger depuis le cache
+      final cached = await _loadFromCache();
+      if (cached != null && cached.isNotEmpty) {
+        _sessions = cached;
+        _loading = false;
+        notifyListeners();
+
+        // Rafraîchir en arrière-plan si le cache est expiré
+        if (_isCacheExpired()) {
+          _refreshInBackground();
+        }
+        return;
+      }
+
+      // Charger depuis la source appropriée selon le type
+      await _fetchSessions();
     } catch (e) {
       _error = e.toString();
       debugPrint('Error loading sessions: $e');
@@ -449,18 +441,220 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _fetchFromCalendar() async {
+  /// Récupère les sessions depuis la source configurée
+  Future<void> _fetchSessions() async {
+    List<Session> sessions = [];
+
+    switch (_settings.calendarSourceType) {
+      case CalendarSourceType.internal:
+        sessions = await _fetchFromInternalCalendar();
+        break;
+
+      case CalendarSourceType.url:
+        sessions = await _fetchFromUrl();
+        break;
+
+      case CalendarSourceType.file:
+        sessions = await _fetchFromFile();
+        break;
+
+      case CalendarSourceType.none:
+        debugPrint('No calendar source configured');
+        return;
+    }
+
+    // Filtrer par praticiens sélectionnés
+    if (_settings.selectedPractitioners.isNotEmpty) {
+      sessions = sessions.where((session) {
+        return _settings.selectedPractitioners.any((p) =>
+            session.practitioner.toLowerCase().contains(p.toLowerCase()));
+      }).toList();
+    }
+
+    // Appliquer le statut de paiement persisté
+    sessions = await _applyPaymentStatus(sessions);
+
+    _sessions = sessions;
+    _lastUpdated = DateTime.now();
+    await _saveToCache();
+  }
+
+  /// Récupère les sessions depuis le calendrier interne du téléphone
+  Future<List<Session>> _fetchFromInternalCalendar() async {
+    // Vérifier les permissions
+    final hasPermission = await _calendarService.hasPermissions();
+    if (!hasPermission) {
+      final granted = await _calendarService.requestPermissions();
+      if (!granted) {
+        _permissionDenied = true;
+        throw Exception('Permission d\'accès au calendrier refusée');
+      }
+    }
+
     final startDate = DateTime(2025, 3, 1);
     final endDate = DateTime(2026, 12, 31);
 
-    _sessions = await _calendarService.fetchSessions(
+    return await _calendarService.fetchSessions(
       startDate,
       endDate,
       settings: _settings,
     );
+  }
 
-    _lastUpdated = DateTime.now();
+  /// Récupère les sessions depuis une URL ICS
+  Future<List<Session>> _fetchFromUrl() async {
+    if (_settings.icsUrl == null || _settings.icsUrl!.isEmpty) {
+      throw Exception('URL du calendrier non configurée');
+    }
+
+    debugPrint('Fetching sessions from URL: ${_settings.icsUrl}');
+    return await _icsService.fetchFromUrl(
+      _settings.icsUrl!,
+      _settings.eventPattern,
+    );
+  }
+
+  /// Récupère les sessions depuis un fichier ICS local
+  Future<List<Session>> _fetchFromFile() async {
+    if (_settings.icsFilePath == null || _settings.icsFilePath!.isEmpty) {
+      throw Exception('Fichier ICS non configuré');
+    }
+
+    final file = File(_settings.icsFilePath!);
+    if (!await file.exists()) {
+      throw Exception('Le fichier ICS n\'existe plus');
+    }
+
+    debugPrint('Fetching sessions from file: ${_settings.icsFilePath}');
+    return await _icsService.parseFromFile(
+      file,
+      _settings.eventPattern,
+    );
+  }
+
+  /// Ancien nom conservé pour compatibilité
+  Future<void> _fetchFromCalendar() async {
+    await _fetchSessions();
+  }
+
+  /// Applique le statut de paiement persisté aux sessions
+  Future<List<Session>> _applyPaymentStatus(List<Session> sessions) async {
+    final payments = await _paymentService.loadPayments();
+
+    return sessions.map((session) {
+      final paymentInfo = payments[session.id];
+      if (paymentInfo != null) {
+        // La séance a été marquée comme payée manuellement
+        return session.copyWith(
+          paid: true,
+          paidDate: paymentInfo.paidDate,
+          paymentLabel: paymentInfo.label,
+        );
+      } else {
+        // La séance n'est pas marquée comme payée
+        return session.copyWith(paid: false, clearPaymentInfo: true);
+      }
+    }).toList();
+  }
+
+  /// Marque une séance comme payée
+  Future<void> markSessionAsPaid(String sessionId, {String? label}) async {
+    await _paymentService.markAsPaid(sessionId, label: label);
+
+    // Mettre à jour la session localement
+    final index = _sessions.indexWhere((s) => s.id == sessionId);
+    if (index != -1) {
+      _sessions[index] = _sessions[index].copyWith(
+        paid: true,
+        paidDate: DateTime.now(),
+        paymentLabel: label,
+      );
+      await _saveToCache();
+      notifyListeners();
+    }
+  }
+
+  /// Marque plusieurs séances comme payées
+  Future<void> markMultipleSessionsAsPaid(List<String> sessionIds, {String? label}) async {
+    await _paymentService.markMultipleAsPaid(sessionIds, label: label);
+
+    // Mettre à jour les sessions localement
+    final now = DateTime.now();
+    for (final sessionId in sessionIds) {
+      final index = _sessions.indexWhere((s) => s.id == sessionId);
+      if (index != -1) {
+        _sessions[index] = _sessions[index].copyWith(
+          paid: true,
+          paidDate: now,
+          paymentLabel: label,
+        );
+      }
+    }
     await _saveToCache();
+    notifyListeners();
+  }
+
+  /// Marque une séance comme non payée
+  Future<void> markSessionAsUnpaid(String sessionId) async {
+    await _paymentService.markAsUnpaid(sessionId);
+
+    // Mettre à jour la session localement
+    final index = _sessions.indexWhere((s) => s.id == sessionId);
+    if (index != -1) {
+      _sessions[index] = _sessions[index].copyWith(
+        paid: false,
+        clearPaymentInfo: true,
+      );
+      await _saveToCache();
+      notifyListeners();
+    }
+  }
+
+  /// Marque plusieurs séances comme non payées
+  Future<void> markMultipleSessionsAsUnpaid(List<String> sessionIds) async {
+    await _paymentService.markMultipleAsUnpaid(sessionIds);
+
+    // Mettre à jour les sessions localement
+    for (final sessionId in sessionIds) {
+      final index = _sessions.indexWhere((s) => s.id == sessionId);
+      if (index != -1) {
+        _sessions[index] = _sessions[index].copyWith(
+          paid: false,
+          clearPaymentInfo: true,
+        );
+      }
+    }
+    await _saveToCache();
+    notifyListeners();
+  }
+
+  /// Bascule le statut de paiement d'une séance
+  Future<void> toggleSessionPayment(String sessionId, {String? label}) async {
+    final session = _sessions.firstWhere(
+      (s) => s.id == sessionId,
+      orElse: () => throw Exception('Session not found'),
+    );
+
+    if (session.paid) {
+      await markSessionAsUnpaid(sessionId);
+    } else {
+      await markSessionAsPaid(sessionId, label: label);
+    }
+  }
+
+  /// Récupère les séances par année
+  List<Session> getSessionsByYear(int year) {
+    return _sessions.where((s) => s.date.year == year && !s.isFuture).toList();
+  }
+
+  /// Récupère les séances non payées
+  List<Session> get unpaidSessions {
+    return _sessions.where((s) => !s.paid && !s.isFuture).toList();
+  }
+
+  /// Récupère les séances non payées par année
+  List<Session> getUnpaidSessionsByYear(int year) {
+    return _sessions.where((s) => !s.paid && !s.isFuture && s.date.year == year).toList();
   }
 
   Future<void> _refreshInBackground() async {

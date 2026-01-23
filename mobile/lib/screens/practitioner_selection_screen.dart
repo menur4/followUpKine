@@ -4,12 +4,16 @@ class PractitionerSelectionScreen extends StatefulWidget {
   final Map<String, int> discoveredPractitioners;
   final List<String> preselectedPractitioners;
   final Function(List<String>) onSelectionConfirmed;
+  final bool showBackButton;
+  final VoidCallback? onBack;
 
   const PractitionerSelectionScreen({
     super.key,
     required this.discoveredPractitioners,
     this.preselectedPractitioners = const [],
     required this.onSelectionConfirmed,
+    this.showBackButton = false,
+    this.onBack,
   });
 
   @override
@@ -74,7 +78,13 @@ class _PractitionerSelectionScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sélection des praticiens'),
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: widget.showBackButton,
+        leading: widget.showBackButton && widget.onBack != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: widget.onBack,
+              )
+            : null,
       ),
       body: Column(
         children: [

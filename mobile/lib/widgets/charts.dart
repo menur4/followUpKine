@@ -42,7 +42,7 @@ class MonthlyChart extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             SizedBox(
-              height: 280,
+              height: 260,
               child: BarChart(
                 BarChartData(
                   alignment: BarChartAlignment.spaceAround,
@@ -259,8 +259,9 @@ class PractitionerChart extends StatelessWidget {
 
 class PaymentChart extends StatelessWidget {
   final PaymentStats stats;
+  final VoidCallback? onTap;
 
-  const PaymentChart({super.key, required this.stats});
+  const PaymentChart({super.key, required this.stats, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -271,19 +272,29 @@ class PaymentChart extends StatelessWidget {
     final paidTotal = stats.paid2025 + stats.paid2026;
     final paidPercentage = (paidTotal / stats.total * 100).round();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Statut des paiements',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Statut des paiements',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (onTap != null)
+                    Icon(Icons.chevron_right, color: Colors.grey[400]),
+                ],
               ),
-            ),
             const SizedBox(height: 16),
             SizedBox(
               height: 200,
@@ -320,12 +331,13 @@ class PaymentChart extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _LegendItem(color: Colors.green[400]!, label: 'Payées ($paidTotal)'),
-            const SizedBox(height: 4),
-            if (stats.pending > 0)
-              _LegendItem(
-                  color: Colors.orange[400]!, label: 'En attente (${stats.pending})'),
-          ],
+              _LegendItem(color: Colors.green[400]!, label: 'Payées ($paidTotal)'),
+              const SizedBox(height: 4),
+              if (stats.pending > 0)
+                _LegendItem(
+                    color: Colors.orange[400]!, label: 'En attente (${stats.pending})'),
+            ],
+          ),
         ),
       ),
     );

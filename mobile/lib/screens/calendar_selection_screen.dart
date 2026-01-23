@@ -57,7 +57,7 @@ class _CalendarSelectionScreenState extends State<CalendarSelectionScreen> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Text(
-              'Choisissez le calendrier contenant vos rendez-vous de kinésithérapie :',
+              'Choisissez le calendrier contenant vos rendez-vous :',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],

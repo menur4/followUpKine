@@ -107,7 +107,7 @@ class _LockScreenState extends State<LockScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'Suivi Kiné',
+                  'Mes Séances',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,

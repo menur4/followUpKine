@@ -31,7 +31,7 @@ class AuthService {
   Future<bool> authenticate() async {
     try {
       return await _localAuth.authenticate(
-        localizedReason: 'Authentifiez-vous pour accéder à Suivi Kiné',
+        localizedReason: 'Authentifiez-vous pour accéder à Mes Séances',
         options: const AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: false, // Allow PIN/pattern as fallback

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/session_provider.dart';
 import '../widgets/stat_card.dart';
-import '../widgets/session_list.dart';
-import '../widgets/charts.dart';
+import '../widgets/charts_carousel.dart';
+import '../widgets/sessions_carousel.dart';
+import '../widgets/practitioners_carousel.dart';
 import 'settings_screen.dart';
 import 'calendar_selection_screen.dart';
 import 'organizer_selection_screen.dart';
@@ -34,11 +34,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Kinésithérapie 2025-2026',
+              'Mes Séances',
               style: TextStyle(fontSize: 18),
             ),
             Text(
-              'Vue consolidée avec suivi des paiements',
+              'Suivi de vos rendez-vous et paiements',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
             ),
           ],
@@ -164,7 +164,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Pour afficher vos séances de kinésithérapie, l\'application a besoin d\'accéder à votre calendrier.',
+                      'Pour afficher vos séances, l\'application a besoin d\'accéder à votre calendrier.',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
@@ -215,12 +215,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final practitionerStats = provider.practitionerStats;
           final pastSessions = provider.pastSessions.reversed.take(5).toList();
           final futureSessions = provider.futureSessions.take(5).toList();
-
-          String formattedLastUpdated = 'Jamais';
-          if (provider.lastUpdated != null) {
-            formattedLastUpdated = DateFormat('dd/MM/yyyy HH:mm', 'fr_FR')
-                .format(provider.lastUpdated!);
-          }
 
           return RefreshIndicator(
             onRefresh: provider.refresh,
@@ -287,81 +281,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   const SizedBox(height: 16),
 
-                  // Graphiques
-                  MonthlyChart(
-                    stats: monthlyStats,
+                  // Carrousel de graphiques
+                  ChartsCarousel(
+                    monthlyStats: monthlyStats,
                     practitioners: provider.settings.selectedPractitioners,
+                    paymentStats: paymentStats,
+                    practitionerStats: practitionerStats,
                   ),
                   const SizedBox(height: 16),
 
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: PaymentChart(stats: paymentStats),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  PractitionerChart(stats: practitionerStats),
-                  const SizedBox(height: 16),
-
-                  // Listes de séances
-                  if (futureSessions.isNotEmpty) ...[
-                    SessionList(
-                      title: 'Prochaines séances',
-                      sessions: futureSessions,
-                      showFuture: true,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  SessionList(
-                    title: 'Dernières séances',
-                    sessions: pastSessions,
+                  // Carrousel des séances
+                  SessionsCarousel(
+                    futureSessions: futureSessions,
+                    pastSessions: pastSessions,
                   ),
 
                   const SizedBox(height: 16),
 
-                  // Informations pratiques
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Informations pratiques',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          _InfoRow(
-                            icon: Icons.location_on,
-                            label: 'Lieu',
-                            value: '24 Rue du Javelot, 75013',
-                          ),
-                          _InfoRow(
-                            icon: Icons.access_time,
-                            label: 'Horaire',
-                            value: 'Généralement 12h15-13h15',
-                          ),
-                          _InfoRow(
-                            icon: Icons.business,
-                            label: 'Accès',
-                            value: 'RDC, dalle Olympiades',
-                          ),
-                          _InfoRow(
-                            icon: Icons.update,
-                            label: 'Mis à jour',
-                            value: formattedLastUpdated,
-                          ),
-                        ],
-                      ),
-                    ),
+                  // Carrousel des praticiens
+                  PractitionersCarousel(
+                    sessions: provider.sessions,
+                    practitioners: provider.settings.selectedPractitioners,
+                    lastUpdated: provider.lastUpdated,
                   ),
                 ],
               ),
@@ -400,45 +341,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -1,5 +1,5 @@
 name: suivi_kine
-description: "Suivi des séances de kinésithérapie - Application mobile"
+description: "Mes Séances - Suivi de vos rendez-vous et paiements"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -56,6 +56,21 @@ dependencies:
   # Permissions handling
   permission_handler: ^11.3.0
 
+  # Image picker for photos
+  image_picker: ^1.1.2
+
+  # Path provider for file storage
+  path_provider: ^2.1.5
+
+  # File picker for ICS import
+  file_picker: ^8.1.7
+
+  # HTTP client for remote calendars
+  http: ^1.2.2
+
+  # App version info
+  package_info_plus: ^8.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -73,9 +88,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon.png"
+  image_path: "assets/calendar.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/icon.png"
+  adaptive_icon_foreground: "assets/calendar.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

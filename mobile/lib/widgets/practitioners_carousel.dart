@@ -206,10 +206,10 @@ class _PractitionersCarouselState extends State<PractitionersCarousel> {
           Text(
             _appVersion.isNotEmpty
                 ? (widget.lastUpdated != null
-                    ? 'v$_appVersion • Mis à jour le ${DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR').format(widget.lastUpdated!)}'
+                    ? 'v$_appVersion • Données mises à jour le ${DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR').format(widget.lastUpdated!)}'
                     : 'v$_appVersion')
                 : (widget.lastUpdated != null
-                    ? 'Mis à jour le ${DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR').format(widget.lastUpdated!)}'
+                    ? 'Données mises à jour le ${DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR').format(widget.lastUpdated!)}'
                     : ''),
             style: TextStyle(
               fontSize: 11,
@@ -279,10 +279,10 @@ class _PractitionersCarouselState extends State<PractitionersCarousel> {
         Text(
           _appVersion.isNotEmpty
               ? (widget.lastUpdated != null
-                  ? 'v$_appVersion • Mis à jour le ${DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR').format(widget.lastUpdated!)}'
+                  ? 'v$_appVersion • Données mises à jour le ${DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR').format(widget.lastUpdated!)}'
                   : 'v$_appVersion')
               : (widget.lastUpdated != null
-                  ? 'Mis à jour le ${DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR').format(widget.lastUpdated!)}'
+                  ? 'Données mises à jour le ${DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR').format(widget.lastUpdated!)}'
                   : ''),
           style: TextStyle(
             fontSize: 11,

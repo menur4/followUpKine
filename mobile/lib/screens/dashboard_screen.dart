@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/session_provider.dart';
+import '../widgets/action_sheets.dart';
+import '../services/haptic_service.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/charts_carousel.dart';
 import '../widgets/sessions_carousel.dart';
@@ -27,9 +30,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  Future<void> _handleExitConfirmation() async {
+    HapticService.warning();
+    final confirmed = await ActionSheets.showDestructiveConfirmation(
+      context: context,
+      title: 'Quitter l\'application ?',
+      message: 'Voulez-vous vraiment quitter Mes Séances ?',
+      destructiveLabel: 'Quitter',
+      cancelLabel: 'Annuler',
+    );
+
+    if (confirmed == true) {
+      SystemNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _handleExitConfirmation();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,6 +333,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           );
         },
+      ),
       ),
     );
   }
